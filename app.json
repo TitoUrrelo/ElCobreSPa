@@ -30,6 +30,12 @@
         "projectId": "1498ba2f-50fe-4830-baa6-0cece7506b67"
       }
     },
-    "owner": "titourrelo"
+    "owner": "titourrelo",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1498ba2f-50fe-4830-baa6-0cece7506b67"
+    }
   }
 }

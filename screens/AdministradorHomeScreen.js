@@ -32,7 +32,7 @@ export default function AdministradorHomeScreen({ navigation }) {
     foto: 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png',
   };
 
-  // 🔹 Comandas con ID tipo EMP-1001
+  // Comandas con ID tipo EMP-1001
   const comandas = [
     {
       id: 'EMP-1001',

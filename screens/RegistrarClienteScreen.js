@@ -11,6 +11,9 @@ import {
   Platform,
 } from 'react-native';
 
+import ClienteModel from '../models/clienteModel';
+import { guardarCliente } from '../control/clienteControl';
+
 export default function RegistrarClienteScreen({ navigation }) {
   const [cliente, setCliente] = useState({
     nombre: '',
@@ -20,14 +23,29 @@ export default function RegistrarClienteScreen({ navigation }) {
     direccion: '',
   });
 
-  const handleGuardar = () => {
-    if (!cliente.nombre || !cliente.rut || !cliente.telefono || !cliente.correo) {
-      Alert.alert('⚠️ Campos incompletos', 'Por favor completa todos los campos obligatorios.');
+  // Dentro de RegistrarClienteScreen (Reemplaza tu función handleGuardar)
+  const handleGuardar = async () => {
+    const clienteModel = new ClienteModel(
+      cliente.nombre,
+      cliente.rut,
+      cliente.telefono,
+      cliente.correo,
+      cliente.direccion
+    );
+
+    if (!clienteModel.esValido()) {
+      Alert.alert('Campos incompletos', 'Por favor completa todos los campos obligatorios.');
       return;
     }
 
-    Alert.alert('✅ Cliente registrado', `Cliente ${cliente.nombre} guardado correctamente.`);
-    setCliente({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+    try {
+      const id = await guardarCliente(clienteModel);
+      Alert.alert('Éxito', `Cliente guardado con ID: ${id}`);
+      setCliente({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+    } catch (e) {
+      Alert.alert('Error', e.message);
+      console.error('Error al guardar cliente:', e);
+    }
   };
 
   return (

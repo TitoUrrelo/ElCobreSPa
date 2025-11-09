@@ -13,15 +13,18 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+import { crearComanda } from '../control/comandaControl';
+import { obtenerUltimaComandaPorTipo } from '../control/comandaControl';
+
 export default function CrearComandaScreen() {
-  // 🔹 Clientes simulados
+  // Clientes simulados
   const clientes = [
     { id: 1, nombre: 'Juan Pérez', telefono: '+56 9 1111 2222', tipo: 'particular' },
     { id: 2, nombre: 'Ana López', telefono: '+56 9 3333 4444', tipo: 'particular' },
     { id: 3, nombre: 'Ruta Sur Ltda', telefono: '+56 9 5555 6666', tipo: 'empresa' },
   ];
 
-  // 🔹 Tipos de prendas con su precio
+  // Tipos de prendas con su precio
   const tiposPrendas = [
     { tipo: 'Camisa', precio: 2000 },
     { tipo: 'Pantalón', precio: 2500 },
@@ -41,12 +44,24 @@ export default function CrearComandaScreen() {
   const isWeb = Platform.OS === 'web';
   const formWidth = isWeb ? (width > 600 ? 500 : '90%') : '95%';
 
-  // 🔹 Generar número de orden basado en tipo de cliente
-  const generarNumeroOrden = (tipoCliente) => {
-    const codigo = Math.floor(1000 + Math.random() * 9000);
-    if (tipoCliente === 'empresa') return `EMP-${codigo}`;
-    return `PART-${codigo}`;
-  };
+  // Generar número de orden segun el tipo de cliente
+  const generarNumeroOrden = async (tipoCliente) => {
+  const ultima = await obtenerUltimaComandaPorTipo(tipoCliente);
+  
+  const prefix = tipoCliente === 'empresa' ? 'EMP' : 'PART';
+  let nuevoNumero = 1;
+
+  if (ultima && typeof ultima === 'string') {
+    const partes = ultima.split('-');
+    if (partes.length === 2) {
+      const num = parseInt(partes[1]);
+      if (!isNaN(num)) {
+        nuevoNumero = num + 1;
+      }
+    }
+  }
+  return `${prefix}-${nuevoNumero}`;
+};
 
   const calcularTotal = () =>
     prendas.reduce((acc, p) => {
@@ -59,37 +74,47 @@ export default function CrearComandaScreen() {
     setPrendas([...prendas, { tipo: '', cantidad: '' }]);
   };
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (!clienteSeleccionado || prendas.length === 0) {
       Alert.alert('Error', 'Debes seleccionar un cliente y agregar al menos una prenda.');
       return;
     }
-
     const total = calcularTotal();
 
-    Alert.alert(
-      '✅ Comanda creada',
-      `Comanda ${numeroOrden} creada para ${clienteSeleccionado.nombre}.\nTotal a pagar: $${total}`
-    );
+    const nuevaComanda = {
+      numeroOrden,
+      cliente: clienteSeleccionado,
+      prendas,
+      observaciones,
+      fechaEntrega,
+      total
+    };
 
-    // Reiniciar formulario
-    setClienteSeleccionado(null);
-    setNumeroOrden('');
-    setPrendas([{ tipo: '', cantidad: '' }]);
-    setObservaciones('');
-    setFechaEntrega(new Date());
-  };
-
-  const handleSeleccionarCliente = (value) => {
-    const cliente = clientes.find((c) => c.id === parseInt(value));
-    if (cliente) {
-      setClienteSeleccionado(cliente);
-      setNumeroOrden(generarNumeroOrden(cliente.tipo));
-    } else {
+    try {
+      console.log('🧾 Comanda a guardar:', nuevaComanda);
+      await crearComanda(nuevaComanda);
+      Alert.alert('✅ Comanda creada', `Se guardó correctamente para ${clienteSeleccionado.nombre}`);
       setClienteSeleccionado(null);
       setNumeroOrden('');
+      setPrendas([{ tipo: '', cantidad: '' }]);
+      setObservaciones('');
+      setFechaEntrega(new Date());
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar la comanda');
     }
   };
+
+  const handleSeleccionarCliente = async (value) => {
+  const cliente = clientes.find((c) => c.id === parseInt(value));
+  if (cliente) {
+    setClienteSeleccionado(cliente);
+    const numero = await generarNumeroOrden(cliente.tipo);
+    setNumeroOrden(numero);
+  } else {
+    setClienteSeleccionado(null);
+    setNumeroOrden('');
+  }
+};
 
   return (
     <ScrollView contentContainerStyle={styles.page}>

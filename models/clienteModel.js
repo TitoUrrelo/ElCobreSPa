@@ -1,5 +1,5 @@
 export default class ClienteModel {
-  constructor(nombre, rut, telefono, correo, direccion = '') {
+  constructor({ nombre, rut, telefono, correo, direccion = '' }) {
     this.nombre = nombre;
     this.rut = rut;
     this.telefono = telefono;
@@ -8,6 +8,7 @@ export default class ClienteModel {
   }
 
   esValido() {
+    // Retorna true si los campos obligatorios están completos
     return this.nombre && this.rut && this.telefono && this.correo;
   }
 

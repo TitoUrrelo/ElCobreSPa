@@ -13,7 +13,9 @@ import {
 
 import { guardarCliente } from '../control/clienteControl';
 
-export default function RegistrarClienteScreen({ navigation }) {
+export default function RegistrarClienteScreen({route, navigation }) {
+  const { usuario } = route.params;
+  const tipoCliente = usuario.rol === "Administrador" ? "Empresa" : "Particular";
   const [cliente, setCliente] = useState({
     nombre: '',
     rut: '',
@@ -22,15 +24,23 @@ export default function RegistrarClienteScreen({ navigation }) {
     direccion: '',
   });
 
-  // Dentro de RegistrarClienteScreen (Reemplaza tu función handleGuardar)
+  // registrar clienteS
   const handleGuardar = async () => {
   try {
-    const id = await guardarCliente(cliente); // PASA EL OBJETO COMPLETO
+    const tipoCliente = usuario.rol === "Administrador" ? "Empresa" : "Particular";
+
+    const clienteConTipo = {
+      ...cliente,
+      tipo: tipoCliente,
+    };
+
+    const id = await guardarCliente(clienteConTipo);
+
     Alert.alert('Éxito', `Cliente guardado correctamente`);
     setCliente({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
   } catch (e) {
     Alert.alert('Error', e.message);
-    console.error('Error al guardar cliente:', e);
+    console.log('No se pudo guardar cliente:', e.message);
   }
 };
 
@@ -40,9 +50,7 @@ export default function RegistrarClienteScreen({ navigation }) {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Registrar Cliente</Text>
-
-        {/* Campo: Nombre */}
+        <Text style={styles.title}>Registrar Cliente ({tipoCliente})</Text>
         <Text style={styles.label}>Nombre completo</Text>
         <TextInput
           style={styles.input}
@@ -50,8 +58,6 @@ export default function RegistrarClienteScreen({ navigation }) {
           value={cliente.nombre}
           onChangeText={(text) => setCliente({ ...cliente, nombre: text })}
         />
-
-        {/* Campo: RUT */}
         <Text style={styles.label}>RUT</Text>
         <TextInput
           style={styles.input}
@@ -59,18 +65,14 @@ export default function RegistrarClienteScreen({ navigation }) {
           value={cliente.rut}
           onChangeText={(text) => setCliente({ ...cliente, rut: text })}
         />
-
-        {/* Campo: Teléfono */}
         <Text style={styles.label}>Teléfono</Text>
         <TextInput
           style={styles.input}
-          placeholder="+56 9 1234 5678"
+          placeholder="9 1234 5678"
           keyboardType="phone-pad"
           value={cliente.telefono}
           onChangeText={(text) => setCliente({ ...cliente, telefono: text })}
         />
-
-        {/* Campo: Correo */}
         <Text style={styles.label}>Correo electrónico</Text>
         <TextInput
           style={styles.input}
@@ -79,8 +81,6 @@ export default function RegistrarClienteScreen({ navigation }) {
           value={cliente.correo}
           onChangeText={(text) => setCliente({ ...cliente, correo: text })}
         />
-
-        {/* Campo: Dirección (opcional) */}
         <Text style={styles.label}>Dirección (opcional)</Text>
         <TextInput
           style={styles.input}
@@ -88,13 +88,9 @@ export default function RegistrarClienteScreen({ navigation }) {
           value={cliente.direccion}
           onChangeText={(text) => setCliente({ ...cliente, direccion: text })}
         />
-
-        {/* Botón Guardar */}
         <TouchableOpacity style={styles.button} onPress={handleGuardar}>
           <Text style={styles.buttonText}>Guardar Cliente</Text>
         </TouchableOpacity>
-
-        {/* Botón Volver */}
         <TouchableOpacity
           style={[styles.button, styles.backButton]}
           onPress={() => navigation.goBack()}

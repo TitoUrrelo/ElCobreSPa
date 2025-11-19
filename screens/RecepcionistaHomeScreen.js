@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,73 +13,59 @@ import {
   Modal,
   Platform,
   Alert,
+  RefreshControl,
+  Switch,
+  TextInput,
 } from 'react-native';
 import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-export default function RecepcionistaHomeScreen({ navigation }) {
+import { escucharComandasPorRutPart, handleLogout, cancelarComanda } from '../control/comandaControl';
+
+export default function RecepcionistaHomeScreen({ route, navigation }) {
+  const { nombre, correo, numero, rut, rol} = route.params;
+  const [comandas, setComandas] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [filtro, setFiltro] = useState('Todas');
   const [subFiltro, setSubFiltro] = useState(null);
   const [comandaSeleccionada, setComandaSeleccionada] = useState(null);
 
+  const [busqueda, setBusqueda] = useState("");
+  const [mostrarPicker, setMostrarPicker] = useState(false);
+  const [filtroFecha, setFiltroFecha] = useState(null);
+
   const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.7)).current;
 
-  const recepcionista = {
-    nombre: 'María Antonia',
-    correo: 'maria.Antonia@elcobre.cl',
-    telefono: '+56 9 1234 5678',
+  const [refreshing, setRefreshing] = useState(false);
+
+  const Recepcionista = {
+    nombre,
+    correo,
+    numero,
+    rut,
+    rol,
     foto: 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png',
   };
 
-  const comandas = [
-    {
-      id: 'PART-1001',
-      cliente: 'Juan Pérez',
-      fecha: '12/10/2025',
-      estado: 'En proceso',
-      etapa: 'Lavado',
-      tipoServicio: 'Lavado y secado',
-      prendas: ['3 camisas', '2 pantalones', '1 chaqueta'],
-      total: 8500,
-    },
-    {
-      id: 'PART-1002',
-      cliente: 'Empresa Ruta Sur',
-      fecha: '11/10/2025',
-      estado: 'Entregada',
-      tipoServicio: 'Lavado industrial',
-      prendas: ['Uniformes de trabajo (10)'],
-      total: 23000,
-    },
-    {
-      id: 'PART-1003',
-      cliente: 'Ana Díaz',
-      fecha: '10/10/2025',
-      estado: 'Pendiente',
-      tipoServicio: 'Lavado y planchado',
-      prendas: ['5 blusas', '3 pantalones'],
-      total: 12000,
-    },
-    {
-      id: 'PART-1004',
-      cliente: 'Carlos Ruiz',
-      fecha: '09/10/2025',
-      estado: 'Cancelada',
-      tipoServicio: 'Solo planchado',
-      prendas: ['2 camisas'],
-      total: 4000,
-    },
-    {
-      id: 'PART-1005',
-      cliente: 'María Torres',
-      fecha: '08/10/2025',
-      estado: 'Listo para entrega',
-      etapa: 'Planchado',
-      tipoServicio: 'Lavado completo',
-      prendas: ['3 blusas', '2 pantalones', '1 vestido'],
-      total: 9800,
-    },
-  ];
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  };
+
+
+  useEffect(() => {
+    setLoading(true);
+  
+    const unsubscribe = escucharComandasPorRutPart(rut, (data) => {
+      setComandas(data);
+      setLoading(false);
+    });
+  
+    return () => unsubscribe();
+  }, [rut]);
 
   let comandasFiltradas = filtro === 'Todas' ? comandas : comandas.filter((c) => c.estado === filtro);
   if (filtro === 'En proceso' && subFiltro) {
@@ -88,6 +74,31 @@ export default function RecepcionistaHomeScreen({ navigation }) {
 
   const filtros = ['Todas', 'Pendiente', 'En proceso', 'Listo para entrega', 'Entregada', 'Cancelada'];
   const subFiltrosProceso = ['Lavado', 'Secado', 'Planchado', 'Empaque'];
+
+    // filtro busqueda por nombre o rut
+  if (busqueda.trim() !== "") {
+    comandasFiltradas = comandasFiltradas.filter((c) => {
+      const nombre = c.cliente?.nombre?.toLowerCase() || "";
+      const rutCliente = c.cliente?.rut?.toLowerCase() || "";
+      const b = busqueda.toLowerCase();
+
+      return nombre.includes(b) || rutCliente.includes(b);
+    });
+  }
+
+  if (filtroFecha) {
+    const fechaBase = new Date(filtroFecha);
+    fechaBase.setHours(0,0,0,0);
+
+    comandasFiltradas = comandasFiltradas.filter((c) => {
+      if (!c.fechaCreacion) return false;
+
+      const fechaComanda = new Date(c.fechaCreacion);
+      fechaComanda.setHours(0,0,0,0);
+
+      return fechaComanda.getTime() === fechaBase.getTime();
+    });
+  }
 
   const abrirMenu = () => {
     setMenuVisible(true);
@@ -102,25 +113,82 @@ export default function RecepcionistaHomeScreen({ navigation }) {
   };
 
   const generarPDF = async (comanda) => {
-    const html = `
-      <html>
-        <body style="font-family: Arial; padding: 20px;">
-          <h2>Comprobante de Comanda</h2>
-          <p><b>Cliente:</b> ${comanda.cliente}</p>
-          <p><b>Fecha:</b> ${comanda.fecha}</p>
-          <p><b>Estado:</b> ${comanda.estado}</p>
-          ${comanda.etapa ? `<p><b>Etapa actual:</b> ${comanda.etapa}</p>` : ''}
-          <p><b>Tipo de servicio:</b> ${comanda.tipoServicio}</p>
-          <p><b>Prendas:</b> ${comanda.prendas.join(', ')}</p>
-          <p><b>Total:</b> $${comanda.total}</p>
-          <hr />
-          <p>Atendido por: ${recepcionista.nombre}</p>
-          <p>El Cobre Spa - Servicio de Lavandería</p>
-        </body>
-      </html>
-    `;
-    const { uri } = await Print.printToFileAsync({ html });
-    Alert.alert('PDF generado', `Archivo guardado en: ${uri}`);
+    try {
+      const html = `
+        <html>
+          <body style="font-family: Arial; padding: 25px; max-width: 600px; margin: auto;">
+            <h2 style="text-align:center; margin-bottom: 5px;">Comprobante de Comanda</h2>
+            <p style="text-align:center; font-size: 13px; margin-top: 0;">El Cobre Spa — Servicio de Lavandería</p>
+            <hr />
+            <h3 style="margin-bottom: 5px;">📌 Información General</h3>
+            <div style="font-size: 14px; line-height: 1.4;">
+              <p><b>N° Orden:</b> ${comanda.numeroOrden || '—'}</p>
+              <p><b>Estado:</b> ${comanda.estado || '—'}</p>
+              <p><b>Fecha de creación:</b> ${new Date(comanda.fechaCreacion).toLocaleString() || '—'}</p>
+              <p><b>Fecha de entrega:</b> ${new Date(comanda.fechaEntrega).toLocaleString() || '—'}</p>
+              <p><b>Observaciones:</b> ${comanda.observaciones || 'Ninguna'}</p>
+            </div>
+            <hr />
+            <h3 style="margin-bottom: 5px;">👤 Cliente</h3>
+            <div style="font-size: 14px; line-height: 1.4;">
+              <p><b>Nombre:</b> ${comanda.cliente?.nombre || '—'}</p>
+              <p><b>RUT:</b> ${comanda.cliente?.rut || '—'}</p>
+              <p><b>Correo:</b> ${comanda.cliente?.correo || '—'}</p>
+              <p><b>Teléfono:</b> ${comanda.cliente?.telefono || '—'}</p>
+              <p><b>Dirección:</b> ${comanda.cliente?.direccion || '—'}</p>
+              <p><b>Tipo:</b> ${comanda.cliente?.tipo || '—'}</p>
+            </div>
+            <hr />
+            <h3 style="margin-bottom: 5px;">🧺 Prendas</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <th style="border-bottom: 1px solid #ccc; padding: 6px; text-align:left;">Tipo</th>
+                <th style="border-bottom: 1px solid #ccc; padding: 6px; text-align:center;">Cantidad</th>
+              </tr>
+              ${
+                comanda.prendas?.length
+                  ? comanda.prendas
+                      .map(
+                        (p) => `
+                          <tr>
+                            <td style="padding: 6px;">${p.tipo}</td>
+                            <td style="padding: 6px; text-align:center;">${p.cantidad}</td>
+                          </tr>`
+                      )
+                      .join('')
+                  : `<tr><td colspan="2" style="padding: 6px; text-align:center;">No hay prendas registradas</td></tr>`
+              }
+            </table>
+            <hr />
+            <h3 style="margin-bottom: 5px;">💰 Total</h3>
+            <p style="font-size: 16px;"><b>$${comanda.total || 0}</b></p>
+            <hr />
+            <h3 style="margin-bottom: 5px;">👨‍💼 Atendido por</h3>
+            <div style="font-size: 14px; line-height: 1.4;">
+              <p><b>Nombre:</b> ${comanda.creadoPor?.nombre || '—'}</p>
+              <p><b>Correo:</b> ${comanda.creadoPor?.correo || '—'}</p>
+              <p><b>RUT:</b> ${comanda.creadoPor?.rut || '—'}</p>
+              <p><b>Rol:</b> ${comanda.creadoPor?.rol || '—'}</p>
+            </div>
+            <hr />
+            <p style="text-align:center; font-size: 13px; margin-top: 10px;">
+              Gracias por preferirnos 🌟
+            </p>
+          </body>
+        </html>
+      `;
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          dialogTitle: "Guardar o compartir comanda",
+        });
+      } else {
+        Alert.alert("PDF generado", `Archivo temporal: ${uri}`);
+      }
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      Alert.alert("Error", "No se pudo generar el PDF.");
+    }
   };
 
   return (
@@ -132,6 +200,7 @@ export default function RecepcionistaHomeScreen({ navigation }) {
         <Text style={styles.headerTitle}>Panel del Recepcionista</Text>
       </View>
 
+      {/* Filtros */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {filtros.map((f) => (
@@ -149,6 +218,7 @@ export default function RecepcionistaHomeScreen({ navigation }) {
         </ScrollView>
       </View>
 
+      {/* filtros de filtro */}
       {filtro === 'En proceso' && (
         <View style={styles.subFilterWrapper}>
           <ScrollView
@@ -171,70 +241,202 @@ export default function RecepcionistaHomeScreen({ navigation }) {
         </View>
       )}
 
-      <ScrollView style={styles.scrollArea} contentContainerStyle={{ paddingBottom: 120 }}>
-        <Text style={styles.sectionTitle}>Comandas {filtro}</Text>
-        {comandasFiltradas.length > 0 ? (
-          comandasFiltradas.map((c) => (
-            <TouchableOpacity key={c.id} onPress={() => setComandaSeleccionada(c)}>
-              <View style={styles.comandaCard}>
-                <Text style={styles.comandaCliente}>🧾 ID: {c.id}</Text>
-                <Text style={styles.comandaCliente}>👕 {c.cliente}</Text>
-                <Text style={styles.comandaFecha}>📅 {c.fecha}</Text>
-                <Text style={styles.comandaEstado}>
-                  Estado: <Text style={{ fontWeight: 'bold' }}>{c.estado}</Text>
-                </Text>
-                {c.estado === 'En proceso' && c.etapa && <Text>Etapa: {c.etapa}</Text>}
-              </View>
+      {/* filtro texto rut o nombre */}
+      <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+        <TextInput
+          placeholder="Buscar por nombre o RUT..."
+          value={busqueda}
+          onChangeText={setBusqueda}
+          style={{
+            backgroundColor: '#fff',
+            padding: 10,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: '#ccc'
+          }}
+        />
+      </View>
+
+      {/* botones de fecha */}
+      <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          
+          {/* boton Seleccionar Fecha */}
+          <TouchableOpacity
+            onPress={() => setMostrarPicker(true)}
+            style={{
+              flex: 1,
+              backgroundColor: "#ff6600",
+              padding: 10,
+              borderRadius: 8,
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            <Text style={{ color: "#fff", textAlign: "center" }}>
+              Seleccionar fecha de creación
+            </Text>
+          </TouchableOpacity>
+
+          {/* boton borrar Fecha */}
+          {filtroFecha && (
+            <TouchableOpacity
+              onPress={() => setFiltroFecha(null)}
+              style={{
+                flex: 1,
+                backgroundColor: "#d9534f",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <Text style={{ color: "#fff", textAlign: "center" }}>
+                Limpiar fecha
+              </Text>
             </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.noResults}>No hay comandas con ese filtro</Text>
-        )}
-      </ScrollView>
-
-      <Modal visible={!!comandaSeleccionada} transparent animationType="slide">
-        <TouchableWithoutFeedback onPress={() => setComandaSeleccionada(null)}>
-          <View style={styles.modalOverlay} />
-        </TouchableWithoutFeedback>
-
-        <View style={styles.modalContent}>
-          {comandaSeleccionada && (
-            <>
-              <Text style={styles.modalTitle}>Detalles de la Comanda</Text>
-              <Text>🧾 ID: {comandaSeleccionada.id}</Text>
-              <Text>👤 Cliente: {comandaSeleccionada.cliente}</Text>
-              <Text>📅 Fecha: {comandaSeleccionada.fecha}</Text>
-              <Text>🧺 Servicio: {comandaSeleccionada.tipoServicio}</Text>
-              <Text>🧩 Estado: {comandaSeleccionada.estado}</Text>
-              {comandaSeleccionada.etapa && <Text>🔧 Etapa: {comandaSeleccionada.etapa}</Text>}
-              <Text>👕 Prendas: {comandaSeleccionada.prendas.join(', ')}</Text>
-              <Text>💰 Total: ${comandaSeleccionada.total}</Text>
-              <View style={{ marginTop: 20 }}>
-                <Button title="Descargar PDF" onPress={() => generarPDF(comandaSeleccionada)} />
-              </View>
-              <View style={{ marginTop: 10 }}>
-                <Button title="Cerrar" color="gray" onPress={() => setComandaSeleccionada(null)} />
-              </View>
-            </>
           )}
         </View>
-      </Modal>
 
+        {/* ver fecha */}
+        {filtroFecha && (
+        <Text
+          style={{
+            marginTop: 8,
+            color: "#333",
+            textAlign: "center",
+          }}
+        >
+          Fecha seleccionada: {new Date(filtroFecha).toLocaleDateString()}
+        </Text>
+        )}
+      </View>
+      {mostrarPicker && (
+        <DateTimePicker
+          value={filtroFecha || new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setMostrarPicker(false);
+
+            if (date) {
+              setFiltroFecha(date);
+            }
+          }}
+        />
+      )}
+
+      {/* Lista de comandas */}
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={{ paddingBottom: 180 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6600']} />
+        }
+      >
+              <Text style={styles.sectionTitle}>Comandas {filtro}</Text>
+              {comandasFiltradas.length > 0 ? (
+                comandasFiltradas.map((c) => (
+                  <TouchableOpacity key={c.id} onPress={() => setComandaSeleccionada(c)}>
+                    <View style={styles.comandaCard}>
+                      <Text style={styles.comandaCliente}>🧾 ID: {c.numeroOrden || c.id}</Text>
+                      <Text style={styles.comandaCliente}>👕 Cliente: {c.cliente?.nombre}</Text>
+                      <Text style={styles.comandaFecha}>📅 Fecha Entrega: {new Date(c.fechaEntrega).toLocaleDateString()}</Text>
+                      <Text style={styles.comandaEstado}>
+                        Estado: <Text style={{ fontWeight: 'bold' }}>{c.estado}</Text>
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.noResults}>No hay comandas con ese filtro</Text>
+              )}
+            </ScrollView>
+            <Modal visible={!!comandaSeleccionada} transparent animationType="slide">
+              <TouchableWithoutFeedback onPress={() => setComandaSeleccionada(null)}>
+                <View style={styles.modalOverlay} />
+              </TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                {comandaSeleccionada && (
+                  <>
+                    <Text style={styles.modalTitle}>Detalles de la Comanda</Text>
+                    <Text>🧾 ID: {comandaSeleccionada.numeroOrden}</Text>
+                    <Text>👤 Cliente: {comandaSeleccionada.cliente?.nombre}</Text>
+                    <Text>📅 Fecha entrega: {new Date(comandaSeleccionada.fechaEntrega).toLocaleDateString()}</Text>
+                    <Text>🧺 Servicio: {comandaSeleccionada.tipoServicio}</Text>
+                    <Text>🧩 Estado: {comandaSeleccionada.estado}</Text>
+                    {comandaSeleccionada.etapa && <Text>🔧 Etapa: {comandaSeleccionada.etapa}</Text>}
+                    <Text style={{ marginTop: 10 }}>👕 Prendas:</Text>
+                      {comandaSeleccionada.prendas?.map((p, i) => (
+                        <Text key={i}>        • {p.tipo} ({p.cantidad})</Text>
+                      ))}
+                    <Text>💰 Total: ${comandaSeleccionada.total}</Text>
+                    <Text>🔎 Observaciones: {comandaSeleccionada.observaciones}</Text>
+                    <View style={{ marginTop: 20 }}>
+                      <Button title="Descargar PDF" onPress={() => generarPDF(comandaSeleccionada)} />
+                    </View>
+                      {comandaSeleccionada.estado === "Pendiente" && (
+                        <View style={{ marginTop: 10 }}>
+                          <Button
+                            title="Cancelar Comanda"
+                            color="#d9534f"
+                            onPress={() => {
+                              Alert.alert(
+                                "Confirmar cancelación",
+                                "¿Deseas cancelar esta comanda?",
+                                [
+                                  { text: "No", style: "cancel" },
+                                  {
+                                    text: "Sí",
+                                    onPress: async () => {
+                                      const tipo = comandaSeleccionada.cliente.tipo;
+                                      const id = comandaSeleccionada.id;
+                                      const result = await cancelarComanda(tipo, id);
+                                      if (result.success) {
+                                        Alert.alert("Comanda cancelada", "La comanda fue marcada como cancelada.");
+                                        setComandaSeleccionada(null);
+                                      } else {
+                                        Alert.alert("Error", "No se pudo cancelar la comanda.");
+                                      }
+                                    }
+                                  }
+                                ]
+                              );
+                            }}
+                          />
+                        </View>
+                      )}
+                    <View style={{ marginTop: 10 }}>
+                      <Button title="Cerrar" color="gray" onPress={() => setComandaSeleccionada(null)} />
+                    </View>
+                  </>
+                )}
+              </View>
+            </Modal>
+
+      {/* Botones inferiores */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[styles.bottomButton, { backgroundColor: '#ff6600ff' }]}
-          onPress={() => navigation.navigate('RegistrarCliente')}
+          onPress={() => navigation.navigate('RegistrarCliente', {
+            usuario: Recepcionista,
+          })
+        }
         >
           <Text style={styles.bottomText}>Registrar Cliente</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.bottomButton, { backgroundColor: '#34C759' }]}
-          onPress={() => navigation.navigate('CrearComanda')}
+          onPress={() => navigation.navigate('CrearComanda', {
+            usuario: Recepcionista,
+          })
+        }
         >
-          <Text style={styles.bottomText}>Crear Comanda</Text>
+          <Text style={[styles.bottomText, { color: '#000' }]}>Crear Comanda</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Menu*/}
       {menuVisible && (
         <>
           <TouchableWithoutFeedback onPress={cerrarMenu}>
@@ -242,23 +444,37 @@ export default function RecepcionistaHomeScreen({ navigation }) {
           </TouchableWithoutFeedback>
           <Animated.View style={[styles.sideMenu, { left: slideAnim }]}>
             <View style={styles.menuHeader}>
-              <Image source={{ uri: recepcionista.foto }} style={styles.avatar} />
-              <Text style={styles.nombre}>{recepcionista.nombre}</Text>
-              <Text style={styles.correo}>{recepcionista.correo}</Text>
-              <Text style={styles.telefono}>{recepcionista.telefono}</Text>
+              <Image source={{ uri: Recepcionista.foto }} style={styles.avatar} />
+              <Text style={styles.nombre}>{Recepcionista.nombre}</Text>
+              <Text style={styles.correo}>{Recepcionista.correo}</Text>
+              <Text style={styles.rut}>{Recepcionista.rut}</Text>
+              <Text style={styles.rol}>{Recepcionista.rol}</Text>
             </View>
             <View style={styles.menuBody}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => alert('Perfil')}>
-                <Text style={styles.menuText}>👤 Ver perfil</Text>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  cerrarMenu();
+                  navigation.navigate("Perfil", { usuario: Recepcionista });
+                }}
+              >
+                <Text style={styles.menuText}>Editar perfil</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => alert('Configuración')}>
-                <Text style={styles.menuText}>⚙️ Configuración</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => alert('Cerrar sesión')}>
-                <Text style={styles.menuText}>🚪 Cerrar sesión</Text>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={async () => {
+                  const result = await handleLogout();
+                  if (result.success) {
+                    navigation.replace("Login");
+                  } else {
+                    Alert.alert("Error", "No se pudo cerrar sesión");
+                  }
+                }}
+              >
+                <Text style={styles.menuText}>Cerrar sesión</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={cerrarMenu}>
-                <Text style={styles.closeText}>✖ Cerrar Menú</Text>
+                <Text style={styles.closeText}>Cerrar Menú</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -352,6 +568,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     borderTopWidth: 1,
     borderColor: '#ccc',
+        paddingBottom: Platform.OS === "android" ? 35 : 35,
   },
   bottomButton: {
     flex: 1,

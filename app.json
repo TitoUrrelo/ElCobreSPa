@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.titourrelo.elcobrespa"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,9 +32,7 @@
       }
     },
     "owner": "titourrelo",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/1498ba2f-50fe-4830-baa6-0cece7506b67"
     }

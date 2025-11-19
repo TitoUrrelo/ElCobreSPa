@@ -8,13 +8,15 @@ import CrearComandaScreen from './screens/CrearComandaScreen';
 import AdministradorHomeScreen from './screens/AdministradorHomeScreen';
 import PrendasEmpresasScreen from './screens/PrendasEmpresasScreen';
 import PrendasParticularesScreen from './screens/PrendasParticularesScreen';
+import CreateUserScreen from './screens/CrearUsuarioScreen';
+import PerfilScreen from './screens/perfilUsuarioScreen';
 
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="AdministradorHome" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="RecepcionistaHome" component={RecepcionistaHomeScreen} />
         <Stack.Screen name="AdministradorHome" component={AdministradorHomeScreen} />
@@ -23,6 +25,9 @@ export default function App() {
 
         <Stack.Screen name="PrendasParticulares" component={PrendasParticularesScreen} />
         <Stack.Screen name="PrendasEmpresas" component={PrendasEmpresasScreen} />
+
+        <Stack.Screen name="CrearUsuario" component={CreateUserScreen} />
+        <Stack.Screen name="Perfil" component={PerfilScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

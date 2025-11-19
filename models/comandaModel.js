@@ -1,5 +1,5 @@
 export default class ComandaModel {
-  constructor({ numeroOrden, cliente, prendas,total, observaciones, fechaEntrega, fechaCreacion }) {
+  constructor({ numeroOrden, cliente, prendas,total, observaciones, fechaEntrega, fechaCreacion,creadoPor, procesos }) {
     this.numeroOrden = numeroOrden;
     this.cliente = cliente;
     this.prendas = prendas;
@@ -7,7 +7,9 @@ export default class ComandaModel {
     this.observaciones = observaciones || '';
     this.fechaEntrega = fechaEntrega || new Date();
     this.fechaCreacion = fechaCreacion || new Date();
-    this.estado = 'pendiente';
+    this.estado = 'Pendiente';
+    this.creadoPor = creadoPor || null; 
+    this.procesos = procesos || [];
   }
 
   toFirestore() {
@@ -20,6 +22,8 @@ export default class ComandaModel {
       fechaEntrega: this.fechaEntrega.toISOString(),
       fechaCreacion: this.fechaCreacion.toISOString(),
       estado: this.estado,
+      creadoPor: this.creadoPor,
+      procesos: this.procesos
     };
   }
 }

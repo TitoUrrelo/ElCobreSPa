@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,21 +7,41 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-} from 'react-native';
+  Alert,
+} from "react-native";
 
-export default function PrendasParticularesScreen() {
-  const [prendas, setPrendas] = useState([
-    { id: 1, nombre: 'Camisa', precio: 1500 },
-    { id: 2, nombre: 'Pantalón', precio: 2000 },
-    { id: 3, nombre: 'Chaqueta', precio: 3000 },
-    { id: 4, nombre: 'Vestido', precio: 2500 },
-    { id: 5, nombre: 'Blusa', precio: 1800 },
-  ]);
+import {
+  obtenerPrendas,
+  actualizarPrenda,
+  crearPrenda,
+} from "../control/prendaControl";
 
+export default function PrendasParticularesScreen({ navigation }) {
+  const [prendas, setPrendas] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [modalCrearVisible, setModalCrearVisible] = useState(false);
+
   const [prendaSeleccionada, setPrendaSeleccionada] = useState(null);
-  const [nuevoPrecio, setNuevoPrecio] = useState('');
+  const [nuevoPrecio, setNuevoPrecio] = useState("");
+
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoPrecioCrear, setNuevoPrecioCrear] = useState("");
+
+  // cargar prendas
+  useEffect(() => {
+    cargarPrendas();
+  }, []);
+
+  const cargarPrendas = async () => {
+    try {
+      const data = await obtenerPrendas();
+      setPrendas(data);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "No se pudieron cargar las prendas.");
+    }
+  };
 
   const abrirEdicion = (prenda) => {
     setPrendaSeleccionada(prenda);
@@ -33,23 +53,49 @@ export default function PrendasParticularesScreen() {
     setConfirmVisible(true);
   };
 
-  const confirmarCambio = () => {
-    const prendasActualizadas = prendas.map((p) =>
-      p.id === prendaSeleccionada.id
-        ? { ...p, precio: parseFloat(nuevoPrecio) }
-        : p
-    );
-    setPrendas(prendasActualizadas);
-    setConfirmVisible(false);
-    setModalVisible(false);
+  // actualizar precio
+  const confirmarCambio = async () => {
+    try {
+      await actualizarPrenda(prendaSeleccionada.id, parseFloat(nuevoPrecio));
+      setModalVisible(false);
+      setConfirmVisible(false);
+      cargarPrendas();
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "No se pudo actualizar el precio.");
+    }
+  };
+
+  const crearNuevaPrenda = async () => {
+    if (!nuevoNombre || !nuevoPrecioCrear) {
+      Alert.alert("Error", "Complete el nombre y precio.");
+      return;
+    }
+
+    try {
+      await crearPrenda({
+        tipo: nuevoNombre,
+        precio: parseFloat(nuevoPrecioCrear),
+      });
+
+      setNuevoNombre("");
+      setNuevoPrecioCrear("");
+      setModalCrearVisible(false);
+
+      cargarPrendas();
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "No se pudo crear la prenda.");
+    }
   };
 
   const renderPrenda = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardInfo}>
-        <Text style={styles.prendaNombre}>{item.nombre}</Text>
+        <Text style={styles.prendaNombre}>{item.tipo}</Text>
         <Text style={styles.prendaPrecio}>${item.precio.toLocaleString()}</Text>
       </View>
+
       <TouchableOpacity
         style={styles.editButton}
         onPress={() => abrirEdicion(item)}
@@ -63,20 +109,31 @@ export default function PrendasParticularesScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Prendas Particulares</Text>
 
+      <TouchableOpacity
+        style={[styles.button, styles.backButton]}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.buttonText}>Volver</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: "#34C759" }]}
+        onPress={() => setModalCrearVisible(true)}
+      >
+        <Text style={[styles.buttonText, {color: '#fff'}]}>+ Crear Prenda</Text>
+      </TouchableOpacity>
+
       <FlatList
         data={prendas}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id}
         renderItem={renderPrenda}
         contentContainerStyle={{ paddingBottom: 50 }}
       />
-
-      {/* Modal principal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Editar Precio</Text>
             <Text style={styles.modalLabel}>
-              Prenda: {prendaSeleccionada?.nombre}
+              Prenda: {prendaSeleccionada?.tipo}
             </Text>
             <TextInput
               style={styles.input}
@@ -86,13 +143,13 @@ export default function PrendasParticularesScreen() {
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#34C759' }]}
+                style={[styles.modalButton, { backgroundColor: "#34C759" }]}
                 onPress={solicitarConfirmacion}
               >
                 <Text style={styles.modalButtonText}>Guardar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: 'gray' }]}
+                style={[styles.modalButton, { backgroundColor: "gray" }]}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.modalButtonText}>Cancelar</Text>
@@ -101,26 +158,58 @@ export default function PrendasParticularesScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Modal de confirmación sobre el modal principal */}
       <Modal visible={confirmVisible} transparent animationType="fade">
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmModal}>
             <Text style={styles.confirmTitle}>Confirmar cambio</Text>
             <Text style={styles.confirmText}>
-              ¿Deseas actualizar el precio de "{prendaSeleccionada?.nombre}" a ${nuevoPrecio}?
-              {"\n"}Este cambio afectará las comandas futuras de clientes particulares.
+              ¿Deseas actualizar "{prendaSeleccionada?.tipo}" a ${nuevoPrecio}?
             </Text>
             <View style={styles.confirmButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#34C759', flex: 1 }]}
+                style={[styles.modalButton, { backgroundColor: "#34C759" }]}
                 onPress={confirmarCambio}
               >
                 <Text style={styles.modalButtonText}>Confirmar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: 'gray', flex: 1 }]}
+                style={[styles.modalButton, { backgroundColor: "gray" }]}
                 onPress={() => setConfirmVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={modalCrearVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Crear Prenda</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Tipo de prenda"
+              value={nuevoNombre}
+              onChangeText={setNuevoNombre}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Precio"
+              keyboardType="numeric"
+              value={nuevoPrecioCrear}
+              onChangeText={setNuevoPrecioCrear}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#34C759" }]}
+                onPress={crearNuevaPrenda}
+              >
+                <Text style={styles.modalButtonText}>Guardar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "gray" }]}
+                onPress={() => setModalCrearVisible(false)}
               >
                 <Text style={styles.modalButtonText}>Cancelar</Text>
               </TouchableOpacity>
@@ -130,7 +219,7 @@ export default function PrendasParticularesScreen() {
       </Modal>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9f9f9', padding: 20 },
@@ -139,6 +228,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ff6600',
     marginBottom: 15,
+    marginTop: 30,
   },
   card: {
     backgroundColor: '#fff',
@@ -231,5 +321,20 @@ const styles = StyleSheet.create({
   confirmButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+    button: {
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 10, 
+  },
+  backButton: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ff6600"
+  },
+  buttonText: {
+    color: "#ff6600",
+    fontWeight: "bold"
   },
 });

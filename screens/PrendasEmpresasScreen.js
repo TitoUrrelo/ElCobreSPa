@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,35 +7,78 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-export default function PrendasEmpresasScreen() {
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState('Ruta Sur');
+import {
+  obtenerEmpresas,
+  obtenerPrendas,
+  obtenerPreciosEmpresa,
+  crearPreciosEmpresa,
+  actualizarPrecioEmpresa,
+} from "../control/prendaEmpresaControl";
+
+export default function PrendasEmpresasScreen({ navigation }) {
+
+  const [listaEmpresas, setListaEmpresas] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
+
+  const [prendasDisponibles, setPrendasDisponibles] = useState([]);
+  const [prendasSeleccionadas, setPrendasSeleccionadas] = useState([]);
+
+  const [preciosEmpresa, setPreciosEmpresa] = useState([]);
+  const [idDocumentoPrecios, setIdDocumentoPrecios] = useState(null);
+
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalSeleccionPrendas, setModalSeleccionPrendas] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+
   const [prendaSeleccionada, setPrendaSeleccionada] = useState(null);
   const [nuevoPrecio, setNuevoPrecio] = useState('');
 
-  const [preciosEmpresas, setPreciosEmpresas] = useState({
-    'Ruta Sur': [
-      { id: 1, nombre: 'Camisa', precio: 1200 },
-      { id: 2, nombre: 'Pantalón', precio: 1700 },
-      { id: 3, nombre: 'Chaqueta', precio: 2600 },
-    ],
-    'Lavaseco Express': [
-      { id: 1, nombre: 'Camisa', precio: 1400 },
-      { id: 2, nombre: 'Pantalón', precio: 1900 },
-      { id: 3, nombre: 'Chaqueta', precio: 2800 },
-    ],
-    'El Cobre Ltda': [
-      { id: 1, nombre: 'Camisa', precio: 1600 },
-      { id: 2, nombre: 'Pantalón', precio: 2100 },
-      { id: 3, nombre: 'Chaqueta', precio: 3000 },
-    ],
-  });
 
-  const prendas = preciosEmpresas[empresaSeleccionada];
+  // cargar  empresas
+  useEffect(() => {
+    async function cargarEmpresas() {
+      const empresas = await obtenerEmpresas();
+      setListaEmpresas(empresas);
+
+      if (empresas.length > 0) {
+        setEmpresaSeleccionada(listaEmpresas[0].rut)
+      }
+    }
+    cargarEmpresas();
+  }, []);
+
+
+  // cargar datos
+  const cargarDatos = async () => {
+    const todas = await obtenerPrendas();
+    let precios = await obtenerPreciosEmpresa(empresaSeleccionada);
+
+    if (!precios) {
+      setIdDocumentoPrecios(null);
+      setPreciosEmpresa([]);
+      setPrendasDisponibles(todas);
+      return;
+    }
+
+    setIdDocumentoPrecios(precios.id);
+    setPreciosEmpresa(precios.prendas);
+
+    // filtro prendas
+    const idsAsignados = precios.prendas.map(p => p.idPrenda);
+    const filtradas = todas.filter(p => !idsAsignados.includes(p.id));
+
+    setPrendasDisponibles(filtradas);
+  };
+
+  useEffect(() => {
+    if (empresaSeleccionada) {
+      cargarDatos();
+    }
+  }, [empresaSeleccionada]);
 
   const abrirEdicion = (prenda) => {
     setPrendaSeleccionada(prenda);
@@ -43,79 +86,152 @@ export default function PrendasEmpresasScreen() {
     setModalVisible(true);
   };
 
-  const solicitarConfirmacion = () => {
-    setConfirmVisible(true);
-  };
+  const confirmarCambio = async () => {
+    await actualizarPrecioEmpresa(
+      idDocumentoPrecios,
+      prendaSeleccionada.idPrenda,
+      parseFloat(nuevoPrecio)
+    );
 
-  const confirmarCambio = () => {
-    const preciosActualizados = prendas.map((p) =>
-      p.id === prendaSeleccionada.id
+    const nuevosPrecios = preciosEmpresa.map((p) =>
+      p.idPrenda === prendaSeleccionada.idPrenda
         ? { ...p, precio: parseFloat(nuevoPrecio) }
         : p
     );
 
-    // Actualiza solo los precios de la empresa seleccionada
-    setPreciosEmpresas({
-      ...preciosEmpresas,
-      [empresaSeleccionada]: preciosActualizados,
-    });
-
+    setPreciosEmpresa(nuevosPrecios);
     setConfirmVisible(false);
     setModalVisible(false);
   };
 
+  const guardarPrendasSeleccionadas = async () => {
+    if (prendasSeleccionadas.length === 0) {
+      Alert.alert("Error", "Debe seleccionar al menos una prenda.");
+      return;
+    }
+
+    const empresa = listaEmpresas.find(e => e.rut === empresaSeleccionada);
+
+    await crearPreciosEmpresa(
+      empresa.nombre,
+      empresa.rut,
+      prendasSeleccionadas
+    );
+
+    await cargarDatos();
+
+    setPrendasSeleccionadas([]); 
+    setModalSeleccionPrendas(false);
+  };
+
   const renderPrenda = ({ item }) => (
     <View style={styles.card}>
-      <View style={styles.cardInfo}>
-        <Text style={styles.prendaNombre}>{item.nombre}</Text>
-        <Text style={styles.prendaPrecio}>${item.precio.toLocaleString()}</Text>
+      <View>
+        <Text style={styles.prendaNombre}>{item.tipo}</Text>
+        <Text style={styles.prendaPrecio}>${item.precio}</Text>
       </View>
+
       <TouchableOpacity
         style={styles.editButton}
         onPress={() => abrirEdicion(item)}
       >
-        <Text style={styles.editButtonText}>✏️ Editar</Text>
+        <Text style={styles.editButtonText}>Editar</Text>
       </TouchableOpacity>
     </View>
   );
 
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Prendas Empresas</Text>
-
-      {/* Selector de empresa */}
+      <Text style={styles.title}>Precios por Empresa</Text>
+      <TouchableOpacity
+        style={[styles.button, styles.backButton]}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.buttonText}>Volver</Text>
+      </TouchableOpacity>
       <View style={styles.pickerContainer}>
-        <Text style={styles.label}>Seleccionar Empresa:</Text>
+        <Text style={styles.label}>Seleccionar Empresa</Text>
         <View style={styles.pickerWrapper}>
           <Picker
             selectedValue={empresaSeleccionada}
-            onValueChange={(itemValue) => setEmpresaSeleccionada(itemValue)}
+            onValueChange={(v) => setEmpresaSeleccionada(v)}
             style={styles.picker}
           >
-            {Object.keys(preciosEmpresas).map((empresa) => (
-              <Picker.Item key={empresa} label={empresa} value={empresa} />
+            <Picker.Item label="Seleccione Empresa" value={null} />
+            {listaEmpresas.map((e) => (
+              <Picker.Item key={e.id} label={e.nombre} value={e.rut} />
             ))}
           </Picker>
         </View>
       </View>
-
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setModalSeleccionPrendas(true)}
+      >
+        <Text style={styles.addButtonText}>Seleccionar Prendas</Text>
+      </TouchableOpacity>
       <FlatList
-        data={prendas}
-        keyExtractor={(item) => item.id.toString()}
+        data={preciosEmpresa}
+        keyExtractor={(item) => item.idPrenda}
         renderItem={renderPrenda}
-        contentContainerStyle={{ paddingBottom: 50 }}
       />
-
-      {/* Modal principal */}
+      <Modal visible={modalSeleccionPrendas} transparent animationType="fade">
+        <View style={styles.selectOverlay}>
+          <View style={styles.selectModal}>
+            <Text style={styles.modalTitle}>Seleccionar Prendas</Text>
+            {prendasDisponibles.length === 0 ? (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <Text style={{ fontSize: 16, color: "#555" }}>
+                  No hay prendas para seleccionar
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={prendasDisponibles}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.selectItem,
+                      prendasSeleccionadas.includes(item) && styles.selectItemActive
+                    ]}
+                    onPress={() => {
+                      if (prendasSeleccionadas.includes(item)) {
+                        setPrendasSeleccionadas(
+                          prendasSeleccionadas.filter(p => p.id !== item.id)
+                        );
+                      } else {
+                        setPrendasSeleccionadas([...prendasSeleccionadas, item]);
+                      }
+                    }}
+                  >
+                    <Text style={{ color: "#333" }}>{item.tipo}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={guardarPrendasSeleccionadas}
+            >
+              <Text style={styles.modalButtonText}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: "gray", marginTop: 10 }]}
+              onPress={() => setModalSeleccionPrendas(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Editar Precio</Text>
             <Text style={styles.modalLabel}>
-              Prenda: {prendaSeleccionada?.nombre}
-            </Text>
-            <Text style={styles.modalLabel}>
-              Empresa: {empresaSeleccionada}
+              {prendaSeleccionada?.tipo}
             </Text>
             <TextInput
               style={styles.input}
@@ -123,42 +239,37 @@ export default function PrendasEmpresasScreen() {
               value={nuevoPrecio}
               onChangeText={setNuevoPrecio}
             />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#34C759' }]}
-                onPress={solicitarConfirmacion}
-              >
-                <Text style={styles.modalButtonText}>Guardar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: 'gray' }]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => setConfirmVisible(true)}
+            >
+              <Text style={styles.modalButtonText}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: "gray" }]}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancelar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-
-      {/* Modal de confirmación sobre modal */}
       <Modal visible={confirmVisible} transparent animationType="fade">
-        <View style={styles.confirmOverlay}>
+        <View style={styles.selectOverlay}>
           <View style={styles.confirmModal}>
-            <Text style={styles.confirmTitle}>Confirmar cambio</Text>
-            <Text style={styles.confirmText}>
-              ¿Deseas actualizar el precio de "{prendaSeleccionada?.nombre}" a ${nuevoPrecio}?
-              {"\n"}Este cambio afectará las comandas futuras de {empresaSeleccionada}.
+            <Text style={styles.modalTitle}>Confirmar cambio</Text>
+            <Text style={styles.modalLabel}>
+              ¿Actualizar precio a ${nuevoPrecio}?
             </Text>
             <View style={styles.confirmButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#34C759', flex: 1 }]}
+                style={[styles.saveButton, { flex: 1 }]}
                 onPress={confirmarCambio}
               >
                 <Text style={styles.modalButtonText}>Confirmar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: 'gray', flex: 1 }]}
+                style={[styles.saveButton, { backgroundColor: "gray", flex: 1 }]}
                 onPress={() => setConfirmVisible(false)}
               >
                 <Text style={styles.modalButtonText}>Cancelar</Text>
@@ -172,104 +283,120 @@ export default function PrendasEmpresasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9f9f9', padding: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#ff6600', marginBottom: 15 },
-  pickerContainer: { marginBottom: 15 },
-  label: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
+  container: { flex: 1, padding: 20, backgroundColor: "#f4f4f4" },
+  title: { fontSize: 22, fontWeight: "bold", color: "#ff6600", marginBottom: 10,marginTop: 30, },
+  pickerContainer: { marginBottom: 10 },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: { height: 50, color: '#333' },
-  card: {
-    backgroundColor: '#fff',
+    borderColor: "#ccc",
     borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    elevation: 3,
+    overflow: "hidden",
   },
-  cardInfo: { flexDirection: 'column' },
-  prendaNombre: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  prendaPrecio: { color: '#666', marginTop: 4, fontSize: 15 },
+  picker: { height: 50 },
+  button: {
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center"
+  },
+  backButton: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ff6600"
+  },
+  buttonText: { color: "#ff6600", fontWeight: "bold" },
+
+  addButton: {
+    backgroundColor: "#ff6600",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  addButtonText: { color: "#fff", fontWeight: "bold" },
+
+  card: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  prendaNombre: { fontSize: 16, fontWeight: "bold" },
+  prendaPrecio: { color: "#888" },
   editButton: {
-    backgroundColor: '#ff6600',
+    backgroundColor: "#ff6600",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-  editButtonText: { color: '#fff', fontWeight: 'bold' },
+  editButtonText: { color: "#fff" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: '#fff',
-    width: '85%',
+    width: "85%",
+    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 12,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ff6600',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalLabel: { fontSize: 16, marginBottom: 8 },
+  modalTitle: { fontSize: 20, fontWeight: "bold", color: "#ff6600", textAlign: "center" },
+  modalLabel: { marginVertical: 10, fontSize: 16 },
+
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
+    padding: 8,
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     marginBottom: 20,
-    fontSize: 16,
   },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-  modalButton: {
+
+  saveButton: {
+    backgroundColor: "#34C759",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginVertical: 5,
+  },
+  modalButtonText: { color: "#fff", fontWeight: "bold" },
+
+  selectOverlay: {
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 5,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  modalButtonText: { color: '#fff', fontWeight: 'bold' },
-  confirmOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 9999,
-  },
-  confirmModal: {
-    backgroundColor: '#fff',
-    width: '80%',
+  selectModal: {
+    backgroundColor: "#fff",
+    width: "80%",
+    maxHeight: "80%",
     padding: 20,
     borderRadius: 12,
-    elevation: 10,
   },
-  confirmTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ff6600',
-    marginBottom: 10,
-    textAlign: 'center',
+  selectItem: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    marginBottom: 6,
   },
-  confirmText: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#333',
+  selectItemActive: {
+    backgroundColor: "#ff660022",
+    borderColor: "#ff6600",
   },
+
+  confirmModal: {
+    backgroundColor: "#fff",
+    padding: 20,
+    width: "75%",
+    borderRadius: 12,
+  },
+
   confirmButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+    flexDirection: "row",
+    gap: 10
+  }
 });

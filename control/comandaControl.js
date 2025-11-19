@@ -1,63 +1,122 @@
-import { db } from '../firebaseConfig';
-import { collection, addDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { signOut } from "firebase/auth";
+import { db, auth } from '../firebaseConfig';
+import { updateDoc, collection, addDoc, getDocs, query, where, orderBy, limit, onSnapshot, doc } from 'firebase/firestore';
 import ComandaModel from '../models/comandaModel';
 
-const COLLECTION_NAME = 'comandas';
+const COLECCION_PARTICULAR = 'comandas_particular';
+const COLECCION_EMPRESA = 'comandas_empresa';
 
-// Crear comanda
 export const crearComanda = async (comandaData) => {
   try {
+    if (!comandaData.cliente || !comandaData.cliente.tipo) {
+      throw new Error('El cliente no tiene tipo definido.');
+    }
     const comanda = new ComandaModel(comandaData);
-    await addDoc(collection(db, COLLECTION_NAME), comanda.toFirestore());
-    return { success: true };
+    const coleccion =
+      comandaData.cliente.tipo === 'Empresa'
+        ? COLECCION_EMPRESA
+        : COLECCION_PARTICULAR;
+    const docRef = await addDoc(collection(db, coleccion), comanda.toFirestore());
+    return docRef.id;
   } catch (error) {
     console.error('Error al guardar comanda:', error);
     throw error;
   }
 };
 
-// Obtener todas las comandas
-export const obtenerComandas = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error('Error al obtener comandas:', error);
-    throw error;
-  }
+export const escucharComandasPorRut = (rut, callback, onChangeEvent) => {
+  const q = query(
+    collection(db, COLECCION_EMPRESA),
+    where('creadoPor.rut', '==', rut),
+    orderBy('fechaCreacion', 'desc')
+  );
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    const cambios = snapshot.docChanges().map(change => ({
+      tipo: change.type,
+      id: change.doc.id,
+      datos: change.doc.data(),
+    }));
+    callback(data);
+    if (onChangeEvent) onChangeEvent(cambios);
+  });
+  return unsubscribe;
 };
 
-// Obtener comandas por estado
+export const escucharComandasPorRutPart = (rut, callback, onChangeEvent) => {
+  const q = query(
+    collection(db, COLECCION_PARTICULAR),
+    where('creadoPor.rut', '==', rut),
+    orderBy('fechaCreacion', 'desc')
+  );
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    const cambios = snapshot.docChanges().map(change => ({
+      tipo: change.type,
+      id: change.doc.id,
+      datos: change.doc.data(),
+    }));
+    callback(data);
+    if (onChangeEvent) onChangeEvent(cambios);
+  });
+  return unsubscribe;
+};
+
 export const obtenerComandasPendientes = async () => {
+    try {
+        const q = query(collection(db, COMANDAS_COLECCION), where('estado', '==', 'Pendiente'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error al obtener comandas pendientes:', error);
+        throw error;
+    }
+    };
+
+export const obtenerNuevoNumeroOrdenPorTipo = async (tipoCliente) => {
   try {
-    const q = query(collection(db, COLLECTION_NAME), where('estado', '==', 'pendiente'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const prefix = tipoCliente === 'Empresa' ? 'EMP-' : 'PART-';
+    const coleccion =
+      tipoCliente === 'Empresa'
+        ? COLECCION_EMPRESA
+        : COLECCION_PARTICULAR;
+    const snapshot = await getDocs(collection(db, coleccion));
+    const totalComandas = snapshot.size;
+    const nuevoNumero = totalComandas + 1;
+    return `${prefix}${nuevoNumero}`;
   } catch (error) {
-    console.error('Error al obtener comandas pendientes:', error);
-    throw error;
+    console.error("Error al generar número de orden:", error);
+    return null;
   }
 };
 
-export const obtenerUltimaComandaPorTipo = async (tipoCliente) => {
+export const handleLogout = async () => {
   try {
-    const prefix = tipoCliente === 'empresa' ? 'EMP-' : 'PART-';
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('cliente.tipo', '==', tipoCliente),
-      orderBy('numeroOrden', 'desc'),
-      limit(1)
-    );
-
-    const snapshot = await getDocs(q);
-
-    if (!snapshot.empty) {
-      const ultima = snapshot.docs[0].data();
-      return ultima.numeroOrden; // ej: "EMP-0042"
-    }
-    return null;
+    await signOut(auth);
+    return { success: true };
   } catch (error) {
-    console.error('Error al obtener última comanda:', error);
-    return null;
+    console.log("Error al cerrar sesión:", error);
+    return { success: false, error };
+  }
+};
+
+export const cancelarComanda = async (tipoCliente, id) => {
+  try {
+    const coleccion =
+      tipoCliente === "Empresa"
+        ? COLECCION_EMPRESA
+        : COLECCION_PARTICULAR;
+    const ref = doc(db, coleccion, id);
+    await updateDoc(ref, { estado: "Cancelada" });
+    return { success: true };
+  } catch (error) {
+    console.error("Error cancelando comanda:", error);
+    return { success: false, error };
   }
 };

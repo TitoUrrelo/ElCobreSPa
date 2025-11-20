@@ -55,6 +55,7 @@ export default function PrendasEmpresasScreen({ navigation }) {
   // cargar datos
   const cargarDatos = async () => {
     const todas = await obtenerPrendas();
+    todas.sort((a, b) => (a.tipo || "").localeCompare(b.tipo || ""));
     let precios = await obtenerPreciosEmpresa(empresaSeleccionada);
 
     if (!precios) {

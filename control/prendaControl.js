@@ -2,7 +2,7 @@ import { db } from "../firebaseConfig";
 import { collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
 import PrendaModel from "../models/prendaModel";
 
-const PRENDAS_COLECCION = "Prendas";
+const PRENDAS_COLECCION = "prendas_equipo_5";
 
 export async function obtenerPrendas() {
   const snapshot = await getDocs(collection(db, PRENDAS_COLECCION));

@@ -18,6 +18,8 @@ import { doc,
   setDoc,
   getDocs  } from "firebase/firestore";
 
+const USUARIOS_COLECCION = "usuarios_equipo_5";
+
 export async function createUser({ nombre, correo, rut, numero, password, rol }) {
   try {
     console.log("Creando usuario...");
@@ -31,7 +33,7 @@ export async function createUser({ nombre, correo, rut, numero, password, rol })
       numero,
       rol,
     });
-    await setDoc(doc(db, "usuarios", user.uid), usuario.toFirestore());
+    await setDoc(doc(db, USUARIOS_COLECCION, user.uid), usuario.toFirestore());
     console.log("Datos del usuario guardados en Firestore");
     await sendEmailVerification(user);
     console.log("Email enviado para verificación");
@@ -67,7 +69,7 @@ function validarRutPersona(rut) {
 async function rutDuplicadoUsuarios(rut) {
   console.log("Buscando RUT:", rut);
   const q = query(
-    collection(db, "usuarios"),
+    collection(db, USUARIOS_COLECCION),
     where("rut", "==", rut)
   );
   const snapshot = await getDocs(q);
@@ -78,7 +80,7 @@ async function rutDuplicadoUsuarios(rut) {
 async function correoDuplicadoUsuarios(correo) {
   console.log("Buscando correo:", correo);
   const q = query(
-    collection(db, "usuarios"),
+    collection(db, USUARIOS_COLECCION),
     where("correo", "==", correo)
   );
   const snapshot = await getDocs(q);
@@ -137,7 +139,7 @@ export async function handleLogin(email, password) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     console.log("Sesión iniciada. UID:", user.uid);
-    const ref = doc(db, "usuarios", user.uid);
+    const ref = doc(db, USUARIOS_COLECCION, user.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
       console.log("Usuario no encontrado en Firestore");
@@ -225,7 +227,7 @@ export const actualizarUsuario = async ({ nombre, correo, numero, contraseñaAct
       await updateEmail(user, correoLimpio);
       await sendEmailVerification(user);
     }
-    await updateDoc(doc(db, "usuarios", user.uid), {
+    await updateDoc(doc(db, USUARIOS_COLECCION, user.uid), {
       nombre: nombre.trim(),
       correo: correoLimpio,
       numero

@@ -5,9 +5,9 @@ import {
 
 import PrecioEmpresaModel from "../models/prendaEmpresaModel";
 
-const PRECIOS_EMPRESA_COLECCION = "PrendasEmpresas";
-const CLIENTES_COLECCION = "clientes";
-const PRENDAS_COLECCION = "Prendas";
+const PRECIOS_EMPRESA_COLECCION = "prendasEmpresas_equipo_5";
+const CLIENTES_COLECCION = "clientes_equipo_5";
+const PRENDAS_COLECCION = "prendas_equipo_5";
 
 export async function obtenerEmpresas() {
   const q = query(collection(db, CLIENTES_COLECCION), where("tipo", "==", "Empresa"));

@@ -2,7 +2,7 @@ import { db } from '../firebaseConfig';
 import { collection, addDoc, getDocs, query, where  } from 'firebase/firestore';
 import ClienteModel from '../models/clienteModel';
 
-const CLIENTES_COLECCION = 'clientes';
+const CLIENTES_COLECCION = 'clientes_equipo_5';
 
 function rutTieneGuion(rut) {
   return /^[0-9]+-[0-9Kk]$/.test(rut);

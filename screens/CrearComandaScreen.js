@@ -385,7 +385,7 @@ const generarPDF = async (comanda) => {
                 style={styles.deleteButton}
                 onPress={() => handleEliminarPrenda(index)}
               >
-                <Text style={styles.deleteButtonLabel}>Eliminar</Text>
+                <Text style={styles.deleteButtonLabel}>X</Text>
               </TouchableOpacity>
             </View>
           );

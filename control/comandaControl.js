@@ -3,8 +3,8 @@ import { db, auth } from '../firebaseConfig';
 import { updateDoc, collection, addDoc, getDocs, query, where, orderBy, limit, onSnapshot, doc } from 'firebase/firestore';
 import ComandaModel from '../models/comandaModel';
 
-const COLECCION_PARTICULAR = 'comandas_particular';
-const COLECCION_EMPRESA = 'comandas_empresa';
+const COLECCION_PARTICULAR = 'comandas_particular_equipo_5';
+const COLECCION_EMPRESA = 'comandas_empresa_equipo_5';
 
 export const crearComanda = async (comandaData) => {
   try {

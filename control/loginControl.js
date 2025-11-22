@@ -18,7 +18,7 @@ import { doc,
   setDoc,
   getDocs  } from "firebase/firestore";
 
-const USUARIOS_COLECCION = "usuarios_equipo_5";
+const USUARIOS_COLECCION = "usuarios";
 
 export async function createUser({ nombre, correo, rut, numero, password, rol }) {
   try {

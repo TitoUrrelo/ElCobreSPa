@@ -14,6 +14,7 @@ import {
   obtenerPrendas,
   actualizarPrenda,
   crearPrenda,
+  actualizarEstadoPrenda,
 } from "../control/prendaControl";
 
 export default function PrendasParticularesScreen({ navigation }) {
@@ -66,6 +67,16 @@ export default function PrendasParticularesScreen({ navigation }) {
     }
   };
 
+  const cambiarEstado = async (prenda) => {
+    try {
+      await actualizarEstadoPrenda(prenda.id, !prenda.estado);
+      cargarPrendas();
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "No se pudo cambiar el estado de la prenda.");
+    }
+  };
+
   const crearNuevaPrenda = async () => {
     if (!nuevoNombre || !nuevoPrecioCrear) {
       Alert.alert("Error", "Complete el nombre y precio.");
@@ -91,19 +102,37 @@ export default function PrendasParticularesScreen({ navigation }) {
 
   const renderPrenda = ({ item }) => (
     <View style={styles.card}>
-      <View style={styles.cardInfo}>
+      <View style={{ flex: 1 }}>
         <Text style={styles.prendaNombre}>{item.tipo}</Text>
-        <Text style={styles.prendaPrecio}>${item.precio.toLocaleString()}</Text>
+        <Text style={styles.prendaPrecio}>${item.precio}</Text>
+        <View>
+          <Text style={{ color: item.estado ? "green" : "#cc0000", fontWeight: "bold" }}>
+            {item.estado ? "Activo" : "Inactivo"}
+          </Text>
+        </View>
       </View>
-
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => abrirEdicion(item)}
-      >
-        <Text style={styles.editButtonText}>✏️ Editar</Text>
-      </TouchableOpacity>
+      <View style={styles.actionContainer}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => abrirEdicion(item)}
+        >
+          <Text style={styles.buttonTextWhite}>Editar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.stateButton,
+            { backgroundColor: item.estado ? "#cc0000" : "#34C759" }
+          ]}
+          onPress={() => cambiarEstado(item)}
+        >
+          <Text style={styles.buttonTextWhite}>
+            {item.estado ? "Desactivar" : "Activar"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
+
 
   return (
     <View style={styles.container}>
@@ -336,5 +365,57 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#ff6600",
     fontWeight: "bold"
+  },
+  card: {
+    backgroundColor: "#fff",
+    padding: 18,
+    borderRadius: 14,
+    marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  prendaNombre: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  prendaPrecio: {
+    color: "#888",
+    fontSize: 15,
+    marginTop: 3,
+  },
+  estadoBadge: {
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  actionContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  buttonTextWhite: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  editButton: {
+    backgroundColor: "#ff6600",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    elevation: 2,
+  },
+  stateButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    elevation: 2,
   },
 });

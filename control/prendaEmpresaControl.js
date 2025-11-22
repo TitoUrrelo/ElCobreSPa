@@ -9,6 +9,10 @@ const PRECIOS_EMPRESA_COLECCION = "prendasEmpresas_equipo_5";
 const CLIENTES_COLECCION = "clientes_equipo_5";
 const PRENDAS_COLECCION = "prendas_equipo_5";
 
+//const PRECIOS_EMPRESA_COLECCION = "PrendasEmpresas";
+//const CLIENTES_COLECCION = "clientes";
+//const PRENDAS_COLECCION = "Prendas";
+
 export async function obtenerEmpresas() {
   const q = query(collection(db, CLIENTES_COLECCION), where("tipo", "==", "Empresa"));
   const snapshot = await getDocs(q);
@@ -58,6 +62,7 @@ export async function crearPreciosEmpresa(nombreEmpresa, rutEmpresa, prendasNuev
         idPrenda: p.id,
         tipo: p.tipo,
         precio: p.precio,
+        estado: p.estado,
       }))
     });
     await addDoc(collection(db, PRECIOS_EMPRESA_COLECCION), modelo.toFirestore());
@@ -105,4 +110,19 @@ export async function crearPreciosEmpresaConSeleccion(empresa, prendasSelecciona
     modelo.toFirestore()
   );
   return ref.id;
+}
+
+export async function actualizarEstadoPrendaEmpresa(idDoc, idPrenda, nuevoEstado) {
+  const ref = doc(db, PRECIOS_EMPRESA_COLECCION, idDoc);
+
+  // obtener doc
+  const snapshot = await getDocs(collection(db, PRECIOS_EMPRESA_COLECCION));
+  const docData = snapshot.docs.find(d => d.id === idDoc).data();
+
+  // actualizar estado solo en la prenda indicada
+  const nuevasPrendas = docData.prendas.map((p) =>
+    p.idPrenda === idPrenda ? { ...p, estado: nuevoEstado } : p
+  );
+
+  await updateDoc(ref, { prendas: nuevasPrendas });
 }

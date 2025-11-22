@@ -40,6 +40,17 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
   const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.7)).current;
 
   const [refreshing, setRefreshing] = useState(false);
+  const [scrollHeight, setScrollHeight] = useState(0);
+
+  // Cálculo de altura para Web
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const header = document.querySelector('[data-header]')?.offsetHeight || 50;
+      const filters = document.querySelector('[data-filters]')?.offsetHeight || 200;
+      const bottomBar = document.querySelector('[data-bottom-bar]')?.offsetHeight || 120;
+      setScrollHeight(window.innerHeight - header - filters - bottomBar);
+    }
+  }, []);
 
   const Recepcionista = {
     nombre,
@@ -54,7 +65,6 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 800);
   };
-
 
   useEffect(() => {
     setLoading(true);
@@ -75,7 +85,7 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
   const filtros = ['Todas', 'Pendiente', 'En proceso', 'Listo para entrega', 'Entregada', 'Cancelada'];
   const subFiltrosProceso = ['Lavado', 'Secado', 'Planchado', 'Empaque'];
 
-    // filtro busqueda por nombre o rut
+  // filtro busqueda por nombre o rut
   if (busqueda.trim() !== "") {
     comandasFiltradas = comandasFiltradas.filter((c) => {
       const nombre = c.cliente?.nombre?.toLowerCase() || "";
@@ -116,34 +126,41 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
     try {
       const html = `
         <html>
-          <body style="font-family: Arial; padding: 25px; max-width: 600px; margin: auto;">
-            <h2 style="text-align:center; margin-bottom: 5px;">Comprobante de Comanda</h2>
-            <p style="text-align:center; font-size: 13px; margin-top: 0;">El Cobre Spa — Servicio de Lavandería</p>
-            <hr />
-            <h3 style="margin-bottom: 5px;">📌 Información General</h3>
-            <div style="font-size: 14px; line-height: 1.4;">
-              <p><b>N° Orden:</b> ${comanda.numeroOrden || '—'}</p>
-              <p><b>Estado:</b> ${comanda.estado || '—'}</p>
-              <p><b>Fecha de creación:</b> ${new Date(comanda.fechaCreacion).toLocaleString() || '—'}</p>
-              <p><b>Fecha de entrega:</b> ${new Date(comanda.fechaEntrega).toLocaleString() || '—'}</p>
-              <p><b>Observaciones:</b> ${comanda.observaciones || 'Ninguna'}</p>
-            </div>
-            <hr />
-            <h3 style="margin-bottom: 5px;">👤 Cliente</h3>
-            <div style="font-size: 14px; line-height: 1.4;">
-              <p><b>Nombre:</b> ${comanda.cliente?.nombre || '—'}</p>
-              <p><b>RUT:</b> ${comanda.cliente?.rut || '—'}</p>
-              <p><b>Correo:</b> ${comanda.cliente?.correo || '—'}</p>
-              <p><b>Teléfono:</b> ${comanda.cliente?.telefono || '—'}</p>
-              <p><b>Dirección:</b> ${comanda.cliente?.direccion || '—'}</p>
-              <p><b>Tipo:</b> ${comanda.cliente?.tipo || '—'}</p>
-            </div>
-            <hr />
-            <h3 style="margin-bottom: 5px;">🧺 Prendas</h3>
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <body style="font-family: Arial; padding: 28px; max-width: 620px; margin: auto; color:#333;">
+            
+            <h2 style="text-align:center; margin:0; letter-spacing:1px;">COMPROBANTE DE COMANDA</h2>
+            <p style="text-align:center; font-size:12px; margin-top:4px;">
+              El Cobre Spa · Servicio de Lavandería
+            </p>
+            <hr style="margin:18px 0;" />
+            <!-- Información General -->
+            <h3 style="margin:0 0 8px 0; font-size:17px;">Información General</h3>
+            <table style="width:100%; font-size:14px; line-height:1.35;">
+              <tr><td><b>N° Orden:</b></td><td>${comanda.numeroOrden || '—'}</td></tr>
+              <tr><td><b>Despacho:</b></td><td>${comanda.despacho === true ? "Sí" : "No"}</td></tr>
+              <tr><td><b>Fecha de creación:</b></td><td>${new Date(comanda.fechaCreacion).toLocaleString()}</td></tr>
+              <tr><td><b>Fecha de entrega:</b></td><td>${new Date(comanda.fechaEntrega).toLocaleString()}</td></tr>
+              <tr><td valign="top"><b>Observaciones:</b></td><td>${comanda.observaciones || 'Ninguna'}</td></tr>
+            </table>
+            <hr style="margin:18px 0;" />
+            <!-- Cliente -->
+            <h3 style="margin:0 0 8px 0; font-size:17px;">Cliente</h3>
+            <table style="width:100%; font-size:14px; line-height:1.35;">
+              <tr><td><b>Nombre:</b></td><td>${comanda.cliente?.nombre || '—'}</td></tr>
+              <tr><td><b>RUT:</b></td><td>${comanda.cliente?.rut || '—'}</td></tr>
+              <tr><td><b>Correo:</b></td><td>${comanda.cliente?.correo || '—'}</td></tr>
+              <tr><td><b>Teléfono:</b></td><td>${comanda.cliente?.telefono || '—'}</td></tr>
+              <tr><td><b>Dirección:</b></td><td>${comanda.cliente?.direccion || '—'}</td></tr>
+              <tr><td><b>Tipo:</b></td><td>${comanda.cliente?.tipo || '—'}</td></tr>
+            </table>
+            <hr style="margin:18px 0;" />
+            <!-- Prendas -->
+            <h3 style="margin:0 0 8px 0; font-size:17px;">Detalle de Prendas</h3>
+            <table style="width:100%; border-collapse: collapse; font-size:14px;">
               <tr>
-                <th style="border-bottom: 1px solid #ccc; padding: 6px; text-align:left;">Tipo</th>
-                <th style="border-bottom: 1px solid #ccc; padding: 6px; text-align:center;">Cantidad</th>
+                <th style="border-bottom:1px solid #bbb; text-align:left; padding:6px 2px;">Tipo</th>
+                <th style="border-bottom:1px solid #bbb; text-align:center; padding:6px 2px;">Cantidad</th>
+                <th style="border-bottom:1px solid #bbb; text-align:center; padding:6px 2px;">Precio Unitario</th>
               </tr>
               ${
                 comanda.prendas?.length
@@ -151,32 +168,47 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
                       .map(
                         (p) => `
                           <tr>
-                            <td style="padding: 6px;">${p.tipo}</td>
-                            <td style="padding: 6px; text-align:center;">${p.cantidad}</td>
+                            <td style="padding:6px 2px;">${p.tipo}</td>
+                            <td style="padding:6px 2px; text-align:center;">${p.cantidad}</td>
+                            <td style="padding:6px 2px; text-align:center;">$${p.precioUnitario || 0}</td>
                           </tr>`
                       )
                       .join('')
-                  : `<tr><td colspan="2" style="padding: 6px; text-align:center;">No hay prendas registradas</td></tr>`
+                  : `<tr><td colspan="3" style="padding:6px; text-align:center;">Sin prendas registradas</td></tr>`
               }
             </table>
-            <hr />
-            <h3 style="margin-bottom: 5px;">💰 Total</h3>
-            <p style="font-size: 16px;"><b>$${comanda.total || 0}</b></p>
-            <hr />
-            <h3 style="margin-bottom: 5px;">👨‍💼 Atendido por</h3>
-            <div style="font-size: 14px; line-height: 1.4;">
-              <p><b>Nombre:</b> ${comanda.creadoPor?.nombre || '—'}</p>
-              <p><b>Correo:</b> ${comanda.creadoPor?.correo || '—'}</p>
-              <p><b>RUT:</b> ${comanda.creadoPor?.rut || '—'}</p>
-              <p><b>Rol:</b> ${comanda.creadoPor?.rol || '—'}</p>
-            </div>
-            <hr />
-            <p style="text-align:center; font-size: 13px; margin-top: 10px;">
-              Gracias por preferirnos 🌟
+            <!-- Total -->
+            <hr style="margin:18px 0;" />
+            ${
+              comanda.despacho === true
+                ? `<p style="font-size:15px; margin:0 0 10px 0;"><b>Valor despacho:</b> $3000</p>`
+                : ""
+            }
+            <hr style="margin:18px 0;" />
+            <p style="font-size:16px; margin:0 0 10px 0;">Total: <b>$${comanda.total || 0}</b></p>
+            <hr style="margin:18px 0;" />
+            <!-- Atendido por -->
+            <h3 style="margin:0 0 6px 0; font-size:17px;">Atendido por</h3>
+            <table style="width:100%; font-size:14px; line-height:1.35;">
+              <tr><td><b>Nombre:</b></td><td>${comanda.creadoPor?.nombre || '—'}</td></tr>
+              <tr><td><b>Correo:</b></td><td>${comanda.creadoPor?.correo || '—'}</td></tr>
+              <tr><td><b>RUT:</b></td><td>${comanda.creadoPor?.rut || '—'}</td></tr>
+              <tr><td><b>Rol:</b></td><td>${comanda.creadoPor?.rol || '—'}</td></tr>
+            </table>
+            <hr style="margin:16px 0;" />
+            <p style="text-align:center; font-size:12px; margin-top:4px;">
+              El Cobre Spa — Todos los derechos reservados
             </p>
           </body>
         </html>
       `;
+      if (Platform.OS === "web") {
+        const win = window.open("", "_blank");
+        win.document.write(html);
+        win.document.close();
+        win.print();
+        return;
+      }
       const { uri } = await Print.printToFileAsync({ html });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
@@ -192,16 +224,14 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={{ flex: 1 }}>
+      <View style={styles.header} data-header>
         <TouchableOpacity onPress={abrirMenu}>
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Panel del Recepcionista</Text>
       </View>
-
-      {/* Filtros */}
-      <View style={styles.filterContainer}>
+      <View style={styles.filterContainer} data-filters>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {filtros.map((f) => (
             <TouchableOpacity
@@ -216,75 +246,48 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
-
-      {/* filtros de filtro */}
-      {filtro === 'En proceso' && (
-        <View style={styles.subFilterWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.subFilterContent}
-          >
-            {subFiltrosProceso.map((sf) => (
-              <TouchableOpacity
-                key={sf}
-                style={[styles.subFilterButton, subFiltro === sf && styles.filterButtonActive]}
-                onPress={() => setSubFiltro(sf)}
-              >
-                <Text style={[styles.filterText, subFiltro === sf && styles.filterTextActive]}>
-                  {sf}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* filtro texto rut o nombre */}
-      <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
-        <TextInput
-          placeholder="Buscar por nombre o RUT..."
-          value={busqueda}
-          onChangeText={setBusqueda}
-          style={{
-            backgroundColor: '#fff',
-            padding: 10,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: '#ccc'
-          }}
-        />
-      </View>
-
-      {/* botones de fecha */}
-      <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          
-          {/* boton Seleccionar Fecha */}
-          <TouchableOpacity
-            onPress={() => setMostrarPicker(true)}
+        {filtro === 'En proceso' && (
+          <View style={styles.subFilterWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subFilterContent}
+            >
+              {subFiltrosProceso.map((sf) => (
+                <TouchableOpacity
+                  key={sf}
+                  style={[styles.subFilterButton, subFiltro === sf && styles.filterButtonActive]}
+                  onPress={() => setSubFiltro(sf)}
+                >
+                  <Text style={[styles.filterText, subFiltro === sf && styles.filterTextActive]}>
+                    {sf}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+          <TextInput
+            placeholder="Buscar por nombre o RUT..."
+            value={busqueda}
+            onChangeText={setBusqueda}
             style={{
-              flex: 1,
-              backgroundColor: "#ff6600",
+              backgroundColor: '#fff',
               padding: 10,
               borderRadius: 8,
-              alignItems: "center",
-              justifyContent: "center"
+              borderWidth: 1,
+              borderColor: '#ccc'
             }}
-          >
-            <Text style={{ color: "#fff", textAlign: "center" }}>
-              Seleccionar fecha de creación
-            </Text>
-          </TouchableOpacity>
-
-          {/* boton borrar Fecha */}
-          {filtroFecha && (
+          />
+        </View>
+        <View style={{ paddingHorizontal: 15, marginTop: 10, marginBottom: 10 }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
             <TouchableOpacity
-              onPress={() => setFiltroFecha(null)}
+              onPress={() => setMostrarPicker(true)}
               style={{
                 flex: 1,
-                backgroundColor: "#d9534f",
+                backgroundColor: "#ff6600",
                 padding: 10,
                 borderRadius: 8,
                 alignItems: "center",
@@ -292,130 +295,189 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
               }}
             >
               <Text style={{ color: "#fff", textAlign: "center" }}>
-                Limpiar fecha
+                Seleccionar fecha de creación
               </Text>
             </TouchableOpacity>
+            {filtroFecha && (
+              <TouchableOpacity
+                onPress={() => setFiltroFecha(null)}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#d9534f",
+                  padding: 10,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                <Text style={{ color: "#fff", textAlign: "center" }}>
+                  Limpiar fecha
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {filtroFecha && (
+          <Text
+            style={{
+              marginTop: 8,
+              color: "#333",
+              textAlign: "center",
+            }}
+          >
+            Fecha seleccionada: {new Date(filtroFecha).toLocaleDateString()}
+          </Text>
           )}
         </View>
-
-        {/* ver fecha */}
-        {filtroFecha && (
-        <Text
-          style={{
-            marginTop: 8,
-            color: "#333",
-            textAlign: "center",
-          }}
-        >
-          Fecha seleccionada: {new Date(filtroFecha).toLocaleDateString()}
-        </Text>
-        )}
       </View>
       {mostrarPicker && (
-        <DateTimePicker
-          value={filtroFecha || new Date()}
-          mode="date"
-          display="default"
-          onChange={(event, date) => {
-            setMostrarPicker(false);
-
-            if (date) {
-              setFiltroFecha(date);
-            }
-          }}
-        />
+        Platform.OS === "web" ? (
+          <input
+            type="date"
+            style={{
+              marginTop: 10,
+              marginHorizontal: 15,
+              padding: 10,
+              borderRadius: 8,
+              border: "1px solid #ccc",
+            }}
+            onChange={(e) => {
+              setMostrarPicker(false);
+              const [year, month, day] = e.target.value.split("-");
+              const fechaLocal = new Date(
+                Number(year),
+                Number(month) - 1,
+                Number(day)
+              );
+              setFiltroFecha(fechaLocal);
+            }}
+          />
+        ) : (
+          <DateTimePicker
+            value={filtroFecha || new Date()}
+            mode="date"
+            display="default"
+            onChange={(event, date) => {
+              setMostrarPicker(false);
+              if (date) setFiltroFecha(date);
+            }}
+          />
+        )
       )}
+      {Platform.OS === 'web' ? (
+        <div style={{
+          overflow: 'auto',
+          height: 'calc(100vh - 305px)',
+          paddingBottom: '150px',
+        }}>
+          <Text style={styles.sectionTitle}>Comandas {filtro}</Text>
+          {comandasFiltradas.length > 0 ? (
+            comandasFiltradas.map((c) => (
+              <TouchableOpacity key={c.id} onPress={() => setComandaSeleccionada(c)}>
+                <View style={styles.comandaCard}>
+                  <Text style={styles.comandaCliente}>🧾 Orden: {c.numeroOrden || c.id}</Text>
+                  <Text style={styles.comandaCliente}>👤 Cliente: {c.cliente?.nombre}</Text>
+                  <Text style={styles.comandaFecha}>
+                    📅 Fecha Entrega: {new Date(c.fechaEntrega).toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.comandaEstado}>
+                    Estado: <Text style={{ fontWeight: "bold" }}>{c.estado}</Text>
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.noResults}>No hay comandas con ese filtro</Text>
+          )}
+        </div>
+      ) : (
+        <ScrollView
+          style={{ flex: 1, minHeight: 0 }}
+          contentContainerStyle={{ paddingBottom: 90 }}
+          showsVerticalScrollIndicator={true}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6600']} />
+          }
+        >
+          <Text style={styles.sectionTitle}>Comandas {filtro}</Text>
+          {comandasFiltradas.length > 0 ? (
+            comandasFiltradas.map((c) => (
+              <TouchableOpacity key={c.id} onPress={() => setComandaSeleccionada(c)}>
+                <View style={styles.comandaCard}>
+                  <Text style={styles.comandaCliente}>🧾 Orden: {c.numeroOrden || c.id}</Text>
+                  <Text style={styles.comandaCliente}>👤 Cliente: {c.cliente?.nombre}</Text>
+                  <Text style={styles.comandaFecha}>
+                    📅 Fecha Entrega: {new Date(c.fechaEntrega).toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.comandaEstado}>
+                    Estado: <Text style={{ fontWeight: "bold" }}>{c.estado}</Text>
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.noResults}>No hay comandas con ese filtro</Text>
+          )}
+        </ScrollView>
+      )}
+      <Modal visible={!!comandaSeleccionada} transparent animationType="fade">
+        <TouchableWithoutFeedback onPress={() => setComandaSeleccionada(null)}>
+          <View style={styles.modalOverlay} />
+        </TouchableWithoutFeedback>
 
-      {/* Lista de comandas */}
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={{ paddingBottom: 180 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6600']} />
-        }
-      >
-              <Text style={styles.sectionTitle}>Comandas {filtro}</Text>
-              {comandasFiltradas.length > 0 ? (
-                comandasFiltradas.map((c) => (
-                  <TouchableOpacity key={c.id} onPress={() => setComandaSeleccionada(c)}>
-                    <View style={styles.comandaCard}>
-                      <Text style={styles.comandaCliente}>🧾 ID: {c.numeroOrden || c.id}</Text>
-                      <Text style={styles.comandaCliente}>👕 Cliente: {c.cliente?.nombre}</Text>
-                      <Text style={styles.comandaFecha}>📅 Fecha Entrega: {new Date(c.fechaEntrega).toLocaleDateString()}</Text>
-                      <Text style={styles.comandaEstado}>
-                        Estado: <Text style={{ fontWeight: 'bold' }}>{c.estado}</Text>
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <Text style={styles.noResults}>No hay comandas con ese filtro</Text>
-              )}
-            </ScrollView>
-            <Modal visible={!!comandaSeleccionada} transparent animationType="slide">
-              <TouchableWithoutFeedback onPress={() => setComandaSeleccionada(null)}>
-                <View style={styles.modalOverlay} />
-              </TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                {comandaSeleccionada && (
-                  <>
-                    <Text style={styles.modalTitle}>Detalles de la Comanda</Text>
-                    <Text>🧾 ID: {comandaSeleccionada.numeroOrden}</Text>
-                    <Text>👤 Cliente: {comandaSeleccionada.cliente?.nombre}</Text>
-                    <Text>📅 Fecha entrega: {new Date(comandaSeleccionada.fechaEntrega).toLocaleDateString()}</Text>
-                    <Text>🧺 Servicio: {comandaSeleccionada.tipoServicio}</Text>
-                    <Text>🧩 Estado: {comandaSeleccionada.estado}</Text>
-                    {comandaSeleccionada.etapa && <Text>🔧 Etapa: {comandaSeleccionada.etapa}</Text>}
-                    <Text style={{ marginTop: 10 }}>👕 Prendas:</Text>
-                      {comandaSeleccionada.prendas?.map((p, i) => (
-                        <Text key={i}>        • {p.tipo} ({p.cantidad})</Text>
-                      ))}
-                    <Text>💰 Total: ${comandaSeleccionada.total}</Text>
-                    <Text>🔎 Observaciones: {comandaSeleccionada.observaciones}</Text>
-                    <View style={{ marginTop: 20 }}>
-                      <Button title="Descargar PDF" onPress={() => generarPDF(comandaSeleccionada)} />
-                    </View>
-                      {comandaSeleccionada.estado === "Pendiente" && (
-                        <View style={{ marginTop: 10 }}>
-                          <Button
-                            title="Cancelar Comanda"
-                            color="#d9534f"
-                            onPress={() => {
-                              Alert.alert(
-                                "Confirmar cancelación",
-                                "¿Deseas cancelar esta comanda?",
-                                [
-                                  { text: "No", style: "cancel" },
-                                  {
-                                    text: "Sí",
-                                    onPress: async () => {
-                                      const tipo = comandaSeleccionada.cliente.tipo;
-                                      const id = comandaSeleccionada.id;
-                                      const result = await cancelarComanda(tipo, id);
-                                      if (result.success) {
-                                        Alert.alert("Comanda cancelada", "La comanda fue marcada como cancelada.");
-                                        setComandaSeleccionada(null);
-                                      } else {
-                                        Alert.alert("Error", "No se pudo cancelar la comanda.");
-                                      }
-                                    }
-                                  }
-                                ]
-                              );
-                            }}
-                          />
-                        </View>
-                      )}
-                    <View style={{ marginTop: 10 }}>
-                      <Button title="Cerrar" color="gray" onPress={() => setComandaSeleccionada(null)} />
-                    </View>
-                  </>
+        <View style={styles.bottomSheet}>
+          <View style={styles.bottomSheetHandle} />
+          <ScrollView
+            style={styles.bottomSheetScroll}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={true}
+          >
+            {comandaSeleccionada && (
+              <>
+                <Text style={styles.modalTitle}>Detalles de la Comanda</Text>
+                <Text style={styles.detailText}>🧾 Orden: {comandaSeleccionada.numeroOrden}</Text>
+                <Text style={styles.detailText}>👤 Cliente: {comandaSeleccionada.cliente?.nombre}</Text>
+                <Text style={styles.detailText}>🛻 Despacho: {comandaSeleccionada.despacho === true ? "Si" : "No"}</Text>
+                <Text style={styles.detailText}>
+                  📅 Fecha creación: {new Date(comandaSeleccionada.fechaCreacion).toLocaleDateString()}
+                </Text>
+                <Text style={styles.detailText}>
+                  📅 Fecha entrega: {new Date(comandaSeleccionada.fechaEntrega).toLocaleDateString()}
+                </Text>
+                <Text style={styles.detailText}>🧩 Estado: {comandaSeleccionada.estado}</Text>
+                {comandaSeleccionada.etapa && (
+                  <Text style={styles.detailText}>🔧 Etapa: {comandaSeleccionada.etapa}</Text>
                 )}
-              </View>
-            </Modal>
-
-      {/* Botones inferiores */}
-      <View style={styles.bottomBar}>
+                <Text style={[styles.detailText, { marginTop: 10 }]}>
+                  👕 Prendas:
+                </Text>
+                {comandaSeleccionada.prendas?.map((p, i) => (
+                  <Text key={i} style={styles.detailText}>          • {p.tipo} ({p.cantidad})</Text>
+                ))}
+                <Text style={styles.detailText}>💰 Total: ${comandaSeleccionada.total}</Text>
+                <Text style={styles.detailText}>
+                  🔎 Observaciones: {comandaSeleccionada.observaciones || "Ninguna"}
+                </Text>
+                <View style={{ marginTop: 20 }}>
+                  <Button title="Descargar PDF" onPress={() => generarPDF(comandaSeleccionada)} />
+                </View>
+                {comandaSeleccionada.estado === "Pendiente" && (
+                  <View style={{ marginTop: 10 }}>
+                    <Button
+                      title="Cancelar Comanda"
+                      color="#d9534f"
+                      onPress={() => cancelarComandaModal()}
+                    />
+                  </View>
+                )}
+                <View style={{ marginTop: 10 }}>
+                  <Button title="Cerrar" color="gray" onPress={() => setComandaSeleccionada(null)} />
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+      <View style={styles.bottomBar} data-bottom-bar>
         <TouchableOpacity
           style={[styles.bottomButton, { backgroundColor: '#ff6600ff' }]}
           onPress={() => navigation.navigate('RegistrarCliente', {
@@ -435,20 +497,29 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
           <Text style={[styles.bottomText, { color: '#000' }]}>Crear Comanda</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Menu*/}
       {menuVisible && (
         <>
           <TouchableWithoutFeedback onPress={cerrarMenu}>
             <View style={styles.overlay} />
           </TouchableWithoutFeedback>
-          <Animated.View style={[styles.sideMenu, { left: slideAnim }]}>
+          <Animated.View
+            style={[
+              styles.sideMenu,
+              Platform.OS === "web"
+                ? { transform: [{ translateX: slideAnim }] }
+                : { left: slideAnim }
+            ]}
+          >
             <View style={styles.menuHeader}>
               <Image source={{ uri: Recepcionista.foto }} style={styles.avatar} />
+              <Text>{Recepcionista.rol}:</Text>
               <Text style={styles.nombre}>{Recepcionista.nombre}</Text>
+              <Text>Correo:</Text>
               <Text style={styles.correo}>{Recepcionista.correo}</Text>
+              <Text>Numero:</Text>
+              <Text style={styles.numero}>{Recepcionista.numero}</Text>
+              <Text>Rut:</Text>
               <Text style={styles.rut}>{Recepcionista.rut}</Text>
-              <Text style={styles.rol}>{Recepcionista.rol}</Text>
             </View>
             <View style={styles.menuBody}>
               <TouchableOpacity
@@ -485,7 +556,7 @@ export default function RecepcionistaHomeScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-    subFilterWrapper: {
+  subFilterWrapper: {
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderColor: '#ddd',
@@ -507,12 +578,15 @@ const styles = StyleSheet.create({
     minWidth: 90,
     alignItems: 'center',
   },
-  container: { flex: 1, backgroundColor: '#f9f9f9' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f9f9f9',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ff6600ff',
-    paddingTop: 50,
+    paddingTop: Platform.OS === "web" ? 10 : 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
   },
@@ -523,12 +597,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#fff',
-  },
-  subFilterContainer: {
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
   },
   filterButton: {
     paddingHorizontal: 15,
@@ -544,31 +612,47 @@ const styles = StyleSheet.create({
   },
   filterText: { color: '#555' },
   filterTextActive: { color: '#fff', fontWeight: 'bold' },
-  scrollArea: { flex: 1, padding: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    marginBottom: 10, 
+    color: '#333',
+    paddingHorizontal: 15,
+  },
   comandaCard: {
     backgroundColor: '#fff',
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
+    marginHorizontal: 15,
     elevation: 3,
-    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
   comandaCliente: { fontSize: 16, fontWeight: '600', color: '#333' },
   comandaFecha: { color: '#666', marginTop: 4 },
   comandaEstado: { marginTop: 6, color: '#ff6600ff' },
-  noResults: { textAlign: 'center', color: '#999', marginTop: 20 },
+  noResults: { 
+    textAlign: 'center', 
+    color: '#999', 
+    marginTop: 20,
+    paddingHorizontal: 15,
+  },
   bottomBar: {
-    position: 'absolute',
+    position: Platform.OS === "web" ? "fixed" : "absolute",
     bottom: 0,
-    width: '100%',
-    flexDirection: 'row',
-    backgroundColor: '#eee',
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: "#eee",
+    flexDirection: "row",
     paddingVertical: 10,
-    justifyContent: 'space-around',
+    paddingHorizontal: 10,
     borderTopWidth: 1,
-    borderColor: '#ccc',
-        paddingBottom: Platform.OS === "android" ? 35 : 35,
+    borderColor: "#ccc",
+    paddingBottom: Platform.OS === "android" ? 35 : 35,
   },
   bottomButton: {
     flex: 1,
@@ -595,9 +679,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 10 },
-  nombre: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  nombre: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   correo: { color: '#f0f0f0', fontSize: 14 },
-  telefono: { color: '#e0e0e0', fontSize: 13 },
+  numero: { color: '#f0f0f0', fontSize: 14 },
+  rut: { color: '#e0e0e0', fontSize: 13 },
   menuBody: { padding: 20 },
   menuItem: { paddingVertical: 12, borderBottomWidth: 1, borderColor: '#ddd' },
   menuText: { fontSize: 16, color: '#333' },
@@ -616,15 +701,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  modalContent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalScrollView: {
     backgroundColor: '#fff',
+    maxHeight: '80%',
     padding: 25,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  bottomSheet: {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  maxHeight: "80%",
+  backgroundColor: "#fff",
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+  paddingHorizontal: 20,
+  paddingTop: 10,
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 10,
+  elevation: 10,
+},
+bottomSheetHandle: {
+  width: 40,
+  height: 5,
+  backgroundColor: "#ccc",
+  borderRadius: 10,
+  alignSelf: "center",
+  marginBottom: 10,
+},
+bottomSheetScroll: {
+  width: "100%",
+},
+modalTitle: {
+  fontSize: 20,
+  fontWeight: "bold",
+  marginBottom: 10,
+},
+detailText: {
+  fontSize: 16,
+  marginBottom: 5,
+},
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.4)",
+},
+
 });

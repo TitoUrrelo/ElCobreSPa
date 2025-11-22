@@ -15,7 +15,15 @@ import { guardarCliente } from '../control/clienteControl';
 
 export default function RegistrarClienteScreen({route, navigation }) {
   const { usuario } = route.params;
-  const tipoCliente = usuario.rol === "Administrador" ? "Empresa" : "Particular";
+  if (usuario.rol !== "administrador" && usuario.rol !== "recepcionista") {
+    Alert.alert(
+      "Error de acceso",
+      "Solo administradores o recepcionistas pueden registrar clientes."
+    );
+    navigation.goBack();
+    return null;
+  }
+  const tipoCliente = usuario.rol === "administrador" ? "Empresa" : "Particular";
   const [cliente, setCliente] = useState({
     nombre: '',
     rut: '',
@@ -27,7 +35,14 @@ export default function RegistrarClienteScreen({route, navigation }) {
   // registrar clienteS
   const handleGuardar = async () => {
   try {
-    const tipoCliente = usuario.rol === "Administrador" ? "Empresa" : "Particular";
+    if (usuario.rol !== "administrador" && usuario.rol !== "recepcionista") {
+      Alert.alert(
+        "Error de acceso",
+        "Solo administradores o recepcionistas pueden guardar clientes."
+      );
+      return;
+    }
+    const tipoCliente = usuario.rol === "administrador" ? "Empresa" : "Particular";
 
     const clienteConTipo = {
       ...cliente,

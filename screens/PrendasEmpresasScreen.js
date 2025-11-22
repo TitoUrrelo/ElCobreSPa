@@ -17,6 +17,7 @@ import {
   obtenerPreciosEmpresa,
   crearPreciosEmpresa,
   actualizarPrecioEmpresa,
+  actualizarEstadoPrendaEmpresa,
 } from "../control/prendaEmpresaControl";
 
 export default function PrendasEmpresasScreen({ navigation }) {
@@ -125,19 +126,52 @@ export default function PrendasEmpresasScreen({ navigation }) {
     setModalSeleccionPrendas(false);
   };
 
+  const cambiarEstado = async (prenda) => {
+    const nuevoEstado = !prenda.estado;
+
+    await actualizarEstadoPrendaEmpresa(
+      idDocumentoPrecios,
+      prenda.idPrenda,
+      nuevoEstado
+    );
+
+    const nuevas = preciosEmpresa.map((p) =>
+      p.idPrenda === prenda.idPrenda ? { ...p, estado: nuevoEstado } : p
+    );
+
+    setPreciosEmpresa(nuevas);
+  };
+
   const renderPrenda = ({ item }) => (
     <View style={styles.card}>
       <View>
         <Text style={styles.prendaNombre}>{item.tipo}</Text>
         <Text style={styles.prendaPrecio}>${item.precio}</Text>
+        <Text style={{ color: item.estado ? "green" : "red", marginTop: 4 }}>
+          {item.estado ? "Activo" : "Inactivo"}
+        </Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => abrirEdicion(item)}
-      >
-        <Text style={styles.editButtonText}>Editar</Text>
-      </TouchableOpacity>
+      <View style={styles.actionContainer}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => abrirEdicion(item)}
+        >
+          <Text style={styles.buttonTextWhite}>Editar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.stateButton,
+            { backgroundColor: item.estado ? "#cc0000" : "#34C759" }
+          ]}
+          onPress={() => cambiarEstado(item)}
+        >
+          <Text style={styles.buttonTextWhite}>
+            {item.estado ? "Desactivar" : "Activar"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -399,5 +433,38 @@ const styles = StyleSheet.create({
   confirmButtons: {
     flexDirection: "row",
     gap: 10
-  }
+  },
+  stateButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  stateButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  actionContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+
+  buttonTextWhite: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  editButton: {
+    backgroundColor: "#ff6600",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
+
+  stateButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
 });

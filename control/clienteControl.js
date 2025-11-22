@@ -1,8 +1,9 @@
 import { db } from '../firebaseConfig';
-import { collection, addDoc, getDocs, query, where  } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc  } from 'firebase/firestore';
 import ClienteModel from '../models/clienteModel';
 
 const CLIENTES_COLECCION = 'clientes_equipo_5';
+//const CLIENTES_COLECCION = 'clientes';
 
 function rutTieneGuion(rut) {
   return /^[0-9]+-[0-9Kk]$/.test(rut);
@@ -113,5 +114,22 @@ export async function obtenerClientesPorTipo(tipo) {
   } catch (e) {
     console.error("Error obteniendo clientes filtrados:", e);
     throw e;
+  }
+}
+
+export async function actualizarDireccionClientePorRut(rut, nuevaDireccion) {
+  try {
+    const q = query(collection(db, CLIENTES_COLECCION), where('rut', '==', rut));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      throw new Error('No se encontró cliente con ese RUT');
+    }
+    // Actualiza todos los docs que coincidan (o solo el primero)
+    const promises = snapshot.docs.map(docSnap => updateDoc(docSnap.ref, { direccion: nuevaDireccion }));
+    await Promise.all(promises);
+    return true;
+  } catch (error) {
+    console.error('Error actualizando dirección por RUT:', error);
+    throw error;
   }
 }

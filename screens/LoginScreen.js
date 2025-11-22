@@ -53,7 +53,7 @@ export default function LoginScreen() {
     return;
   }
     const { rol, nombre, correo, numero, rut, uid } = result.user;
-    if (rol === "Administrador") {
+    if (rol === "administrador") {
       navigation.reset({
         index: 0,
         routes: [
@@ -63,8 +63,19 @@ export default function LoginScreen() {
           }
         ],
       });
+    }
+    else if (rol === "gerente") {
+      navigation.reset({
+        index: 0,
+        routes: [
+          { 
+            name: "Gerente", 
+            params: { uid, nombre, correo, numero, rut, rol } 
+          }
+        ],
+      });
     } 
-    else if (rol === "Recepcionista") {
+    else if (rol === "recepcionista") {
       navigation.reset({
         index: 0,
         routes: [

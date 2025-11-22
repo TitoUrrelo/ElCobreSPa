@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { handleCreateUser } from '../control/loginControl';
 
-// 🔹 Generador de contraseña automática (8 caracteres)
 function generarPasswordTemporal() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let pass = "";
@@ -20,7 +19,7 @@ export default function CreateUserScreen() {
   const [correo, setCorreo] = useState("");
   const [rut, setRut] = useState("");
   const [numero, setNumero] = useState("");
-  const [rol, setRol] = useState("Administrador");
+  const [rol, setRol] = useState("administrador");
 
   const onCreateUser = async () => {
     console.log("Iniciando creación");
@@ -51,7 +50,7 @@ export default function CreateUserScreen() {
     setCorreo("");
     setRut("");
     setNumero("");
-    setRol("Administrador");
+    setRol("administrador");
   };
 
   return (
@@ -95,20 +94,28 @@ export default function CreateUserScreen() {
 
           <View style={styles.roleButtons}>
             <TouchableOpacity
-              style={[styles.roleBtn, rol === "Administrador" && styles.roleBtnActive]}
-              onPress={() => setRol("Administrador")}
+              style={[styles.roleBtn, rol === "administrador" && styles.roleBtnActive]}
+              onPress={() => setRol("administrador")}
             >
-              <Text style={[styles.roleText, rol === "Administrador" && styles.roleTextActive]}>
+              <Text style={[styles.roleText, rol === "administrador" && styles.roleTextActive]}>
                 Administrador
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.roleBtn, rol === "Recepcionista" && styles.roleBtnActive]}
-              onPress={() => setRol("Recepcionista")}
+              style={[styles.roleBtn, rol === "recepcionista" && styles.roleBtnActive]}
+              onPress={() => setRol("recepcionista")}
             >
-              <Text style={[styles.roleText, rol === "Recepcionista" && styles.roleTextActive]}>
+              <Text style={[styles.roleText, rol === "recepcionista" && styles.roleTextActive]}>
                 Recepcionista
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.roleBtn, rol === "gerente" && styles.roleBtnActive]}
+              onPress={() => setRol("gerente")}
+            >
+              <Text style={[styles.roleText, rol === "gerente" && styles.roleTextActive]}>
+                Gerente
               </Text>
             </TouchableOpacity>
           </View>

@@ -1,6 +1,7 @@
 import UsuarioModel from "../models/usuarioModel";
 import { auth, db } from '../firebaseConfig';
-import { signInWithEmailAndPassword,
+import {
+  signInWithEmailAndPassword,
   sendPasswordResetEmail,
   updateEmail,
   EmailAuthProvider,
@@ -9,14 +10,16 @@ import { signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification
 } from "firebase/auth";
-import { doc,
+import {
+  doc,
   getDoc,
   updateDoc,
   collection,
   query,
   where,
   setDoc,
-  getDocs  } from "firebase/firestore";
+  getDocs
+} from "firebase/firestore";
 
 const USUARIOS_COLECCION = "usuarios";
 
@@ -27,6 +30,7 @@ export async function createUser({ nombre, correo, rut, numero, password, rol })
     const user = userCred.user;
     console.log("Usuario creado en Auth:", user.uid);
     const usuario = new UsuarioModel({
+      uid: user.uid,
       nombre,
       correo,
       rut,
@@ -61,8 +65,8 @@ function validarRutPersona(rut) {
   const dvEsperado = 11 - (suma % 11);
   const dvFinal =
     dvEsperado === 11 ? "0" :
-    dvEsperado === 10 ? "K" :
-    dvEsperado.toString();
+      dvEsperado === 10 ? "K" :
+        dvEsperado.toString();
   return dvFinal === dv ? true : "INVALIDO";
 }
 
@@ -151,20 +155,20 @@ export async function handleLogin(email, password) {
     const userData = snap.data();
     console.log("Datos Firestore:", userData);
     if (!user.emailVerified) {
-  return {
-    success: false,
-    message: "Tu correo no está verificado. Revisa tu bandeja o solicita reenviar verificación.",
-    needsVerification: true,
-    email: user.email
-  };
-}
+      return {
+        success: false,
+        message: "Tu correo no está verificado. Revisa tu bandeja o solicita reenviar verificación.",
+        needsVerification: true,
+        email: user.email
+      };
+    }
     return {
       success: true,
       user: {
         uid: user.uid,
         nombre: userData.nombre,
         correo: userData.correo,
-        numero: userData.numero,
+        numero: userData.telefono || userData.numero,
         rut: userData.rut,
         rol: userData.rol,
       },
@@ -230,7 +234,7 @@ export const actualizarUsuario = async ({ nombre, correo, numero, contraseñaAct
     await updateDoc(doc(db, USUARIOS_COLECCION, user.uid), {
       nombre: nombre.trim(),
       correo: correoLimpio,
-      numero
+      telefono: numero
     });
     if (cambioCorreo) {
       await signOut(auth);

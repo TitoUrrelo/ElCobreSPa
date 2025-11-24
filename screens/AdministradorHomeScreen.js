@@ -540,19 +540,6 @@ useEffect(() => {
               >
                 <Text style={styles.menuText}>Editar perfil</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={async () => {
-                  const result = await handleLogout();
-                  if (result.success) {
-                    navigation.replace("Login");
-                  } else {
-                    Alert.alert("Error", "No se pudo cerrar sesión");
-                  }
-                }}
-              >
-                <Text style={styles.menuText}>Cerrar sesión</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={cerrarMenu}>
                 <Text style={styles.closeText}>Cerrar Menú</Text>
               </TouchableOpacity>

@@ -123,3 +123,59 @@ export const cancelarComanda = async (tipoCliente, id) => {
     return { success: false, error };
   }
 };
+
+export const FinalizadoComanda = async (tipoCliente, id) => {
+  try {
+    const coleccion =
+      tipoCliente === "Empresa"
+        ? COLECCION_EMPRESA
+        : COLECCION_PARTICULAR;
+    const ref = doc(db, coleccion, id);
+    await updateDoc(ref, { estado: "Finalizado" });
+    return { success: true };
+  } catch (error) {
+    console.error("Error cancelando comanda:", error);
+    return { success: false, error };
+  }
+};
+
+export const obtenerComandasHistoricas = async () => {
+  try {
+    const estadosHistoricos = ['Finalizado', 'Cancelada'];
+    let todasLasComandasHistoricas = [];
+    for (const estado of estadosHistoricos) {
+      const qEmpresas = query(
+        collection(db, COLECCION_EMPRESA),
+        where('estado', '==', estado)
+      );
+      const qParticulares = query(
+        collection(db, COLECCION_PARTICULAR),
+        where('estado', '==', estado)
+      );
+      const snapshotEmpresas = await getDocs(qEmpresas);
+      const snapshotParticulares = await getDocs(qParticulares);
+      const empresas = snapshotEmpresas.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      const particulares = snapshotParticulares.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      todasLasComandasHistoricas = [
+        ...todasLasComandasHistoricas,
+        ...empresas,
+        ...particulares,
+      ];
+    }
+    todasLasComandasHistoricas.sort(
+      (a, b) =>
+        new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
+    );
+    console.log('Total de comandas históricas:', todasLasComandasHistoricas.length);
+    return todasLasComandasHistoricas;
+  } catch (error) {
+    console.error('Error al obtener comandas históricas:', error);
+    throw error;
+  }
+};

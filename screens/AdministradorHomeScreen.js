@@ -21,10 +21,10 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-import { escucharComandasPorRut, handleLogout, cancelarComanda  } from '../control/comandaControl';
+import { escucharComandasPorRut, handleLogout, cancelarComanda, FinalizadoComanda  } from '../control/comandaControl';
 
 export default function AdministradorHomeScreen({ route, navigation }) {
-  const { nombre, correo, numero, rut, rol} = route.params;
+  const { nombre, correo, telefono, rut, rol} = route.params;
   const [comandas, setComandas] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,6 +36,8 @@ export default function AdministradorHomeScreen({ route, navigation }) {
   const [busqueda, setBusqueda] = useState("");
   const [mostrarPicker, setMostrarPicker] = useState(false);
   const [filtroFecha, setFiltroFecha] = useState(null);
+  const [modalCancelar, setModalCancelar] = useState(false);
+  const [modalFinalizar, setmodalFinalizar] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.7)).current;
 
@@ -55,10 +57,10 @@ useEffect(() => {
   const Administrador = {
     nombre,
     correo,
-    numero,
+    telefono,
     rut,
     rol,
-    foto: 'https://cdn-icons-png.flaticon.com/512/3135/3135789.png',
+    foto: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
   };
 
   const onRefresh = () => {
@@ -79,11 +81,21 @@ useEffect(() => {
 
   let comandasFiltradas = filtro === 'Todas' ? comandas : comandas.filter((c) => c.estado === filtro);
   if (filtro === 'En proceso' && subFiltro) {
-    comandasFiltradas = comandasFiltradas.filter((c) => c.etapa === subFiltro);
+    comandasFiltradas = comandasFiltradas.filter((c) => c.faseActual === subFiltro);
+  }else if (filtro === 'Listo para su entrega' && subFiltro) {
+    if (subFiltro === 'Despacho') {
+      comandasFiltradas = comandasFiltradas.filter((c) => c.despacho === true);
+    } else if (subFiltro === 'Retiro') {
+      comandasFiltradas = comandasFiltradas.filter((c) => c.despacho === false);
+    }
+  }else if (filtro === 'Finalizado' && subFiltro) {
+    comandasFiltradas = comandasFiltradas.filter((c) => c.faseActual === subFiltro);
   }
+  
 
-  const filtros = ['Todas', 'Pendiente', 'En proceso', 'Listo para entrega', 'Entregada', 'Cancelada'];
-  const subFiltrosProceso = ['Lavado', 'Secado', 'Planchado', 'Empaque'];
+  const filtros = ['Todas', 'Pendiente', 'En proceso', 'Listo para su entrega', 'Finalizado', 'Cancelada', 'Historial'];
+  const subFiltrosProceso = ['analisis', 'lavado', 'planchado', 'embolsado'];
+  const subfiltrosEntrega = ['Retiro', 'Despacho']
 
   if (busqueda.trim() !== "") {
     comandasFiltradas = comandasFiltradas.filter((c) => {
@@ -233,8 +245,12 @@ useEffect(() => {
               key={f}
               style={[styles.filterButton, filtro === f && styles.filterButtonActive]}
               onPress={() => {
+                if (f === 'Historial') {
+                navigation.navigate('ComandasHistoricas');
+              } else {
                 setFiltro(f);
                 setSubFiltro(null);
+              }
               }}
             >
               <Text style={[styles.filterText, filtro === f && styles.filterTextActive]}>{f}</Text>
@@ -250,6 +266,27 @@ useEffect(() => {
             contentContainerStyle={styles.subFilterContent}
           >
             {subFiltrosProceso.map((sf) => (
+              <TouchableOpacity
+                key={sf}
+                style={[styles.subFilterButton, subFiltro === sf && styles.filterButtonActive]}
+                onPress={() => setSubFiltro(sf)}
+              >
+                <Text style={[styles.filterText, subFiltro === sf && styles.filterTextActive]}>
+                  {sf}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+      {filtro === 'Listo para su entrega' && (
+        <View style={styles.subFilterWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.subFilterContent}
+          >
+            {subfiltrosEntrega.map((sf) => (
               <TouchableOpacity
                 key={sf}
                 style={[styles.subFilterButton, subFiltro === sf && styles.filterButtonActive]}
@@ -337,14 +374,12 @@ useEffect(() => {
             }}
             onChange={(e) => {
               setMostrarPicker(false);
-
               const [year, month, day] = e.target.value.split("-");
               const fechaLocal = new Date(
                 Number(year),
                 Number(month) - 1,
                 Number(day)
               );
-
               setFiltroFecha(fechaLocal);
             }}
           />
@@ -364,8 +399,8 @@ useEffect(() => {
         <div style={{
           overflow: 'auto',
           height: scrollHeight,
-          height: 'calc(100vh - 360px)',
-          paddingBottom: '150px',
+          height: 'calc(105vh - 450px)',
+          paddingBottom: '0px',
         }}>
           <Text style={styles.sectionTitle}>Estado comandas: {filtro}</Text>
 
@@ -381,6 +416,9 @@ useEffect(() => {
                   <Text style={styles.comandaEstado}>
                     Estado: <Text style={{ fontWeight: "bold" }}>{c.estado}</Text>
                   </Text>
+                  {c.estado  === "En proceso" && (
+                    <Text style={styles.comandaEstado}>Fase: <Text style={{ fontWeight: "bold" }}>{c.faseActual}</Text></Text>
+                  )}
                 </View>
               </TouchableOpacity>
             ))
@@ -443,6 +481,7 @@ useEffect(() => {
                 {comandaSeleccionada.etapa && (
                   <Text style={styles.detailText}>🔧 Etapa: {comandaSeleccionada.etapa}</Text>
                 )}
+                <Text style={styles.detailText}>🔧 Fase actual: {comandaSeleccionada.faseActual}</Text>
                 <Text style={[styles.detailText, { marginTop: 10 }]}>
                   👕 Prendas:
                 </Text>
@@ -461,7 +500,16 @@ useEffect(() => {
                     <Button
                       title="Cancelar Comanda"
                       color="#d9534f"
-                      onPress={() => cancelarComandaModal()}
+                      onPress={() => setModalCancelar(true)}
+                    />
+                  </View>
+                )}
+                {comandaSeleccionada.despacho === false && comandaSeleccionada.estado === "Listo para su entrega" && (
+                  <View style={{ marginTop: 10 }}>
+                    <Button
+                      title="Finalizar Comanda"
+                      color="#d9534f"
+                      onPress={() => setmodalFinalizar(true)}
                     />
                   </View>
                 )}
@@ -471,6 +519,92 @@ useEffect(() => {
               </>
             )}
           </ScrollView>
+        </View>
+      </Modal>
+      <Modal
+        visible={modalCancelar}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalCancelar(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>Cancelar Comanda</Text>
+            <Text style={styles.confirmMessage}>
+              ¿Estás seguro de que deseas cancelar esta comanda?
+            </Text>
+
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, { backgroundColor: "#d9534f" }]}
+                onPress={async () => {
+                  const tipo = comandaSeleccionada.cliente.tipo;
+                  const id = comandaSeleccionada.id;
+
+                  const result = await cancelarComanda(tipo, id);
+                  if (result.success) {
+                    setModalCancelar(false);
+                    setComandaSeleccionada(null);
+                    Alert.alert("Comanda cancelada", "La comanda fue marcada como cancelada.");
+                  } else {
+                    Alert.alert("Error", "No se pudo cancelar la comanda.");
+                  }
+                }}
+              >
+                <Text style={styles.confirmBtnText}>Sí, cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.confirmBtn, { backgroundColor: "#6c757d" }]}
+                onPress={() => setModalCancelar(false)}
+              >
+                <Text style={styles.confirmBtnText}>No</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={modalFinalizar}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setmodalFinalizar(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>Finalizar Comanda</Text>
+            <Text style={styles.confirmMessage}>
+              ¿Estás seguro de que deseas Finalizar esta comanda?
+            </Text>
+
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, { backgroundColor: "#d9534f" }]}
+                onPress={async () => {
+                  const tipo = comandaSeleccionada.cliente.tipo;
+                  const id = comandaSeleccionada.id;
+
+                  const result = await FinalizadoComanda(tipo, id);
+                  if (result.success) {
+                    setmodalFinalizar(false);
+                    setComandaSeleccionada(null);
+                    Alert.alert("Comanda finalizada", "La comanda fue marcada como finalizada.");
+                  } else {
+                    Alert.alert("Error", "No se pudo finalizar la comanda.");
+                  }
+                }}
+              >
+                <Text style={styles.confirmBtnText}>Sí, finalizar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.confirmBtn, { backgroundColor: "#6c757d" }]}
+                onPress={() => setmodalFinalizar(false)}
+              >
+                <Text style={styles.confirmBtnText}>No</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
       <View style={styles.bottomBar}>
@@ -525,8 +659,8 @@ useEffect(() => {
               <Text style={styles.nombre}>{Administrador.nombre}</Text>
               <Text >Correo:</Text>
               <Text style={styles.correo}>{Administrador.correo}</Text>
-              <Text >Numero:</Text>
-              <Text style={styles.numero}>{Administrador.numero}</Text>
+              <Text >telefono:</Text>
+              <Text style={styles.telefono}>{Administrador.telefono}</Text>
               <Text >Rut:</Text>
               <Text style={styles.rut}>{Administrador.rut}</Text>
             </View>
@@ -539,19 +673,6 @@ useEffect(() => {
                 }}
               >
                 <Text style={styles.menuText}>Editar perfil</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={async () => {
-                  const result = await handleLogout();
-                  if (result.success) {
-                    navigation.replace("Login");
-                  } else {
-                    Alert.alert("Error", "No se pudo cerrar sesión");
-                  }
-                }}
-              >
-                <Text style={styles.menuText}>Cerrar sesión</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={cerrarMenu}>
                 <Text style={styles.closeText}>Cerrar Menú</Text>
@@ -615,8 +736,8 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     paddingHorizontal: 15,
-    paddingVertical: 6,
-    marginHorizontal: 5,
+    paddingVertical: 8,
+    marginRight: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#ccc',
@@ -708,7 +829,7 @@ const styles = StyleSheet.create({
   avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 10 },
   nombre: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   correo: { color: '#f0f0f0', fontSize: 14 },
-  numero: { color: '#f0f0f0', fontSize: 14 },
+  telefono: { color: '#f0f0f0', fontSize: 14 },
   rut: { color: '#e0e0e0', fontSize: 13 },
   menuBody: { padding: 20 },
   menuItem: { paddingVertical: 12, borderBottomWidth: 1, borderColor: '#ddd' },
@@ -776,30 +897,74 @@ const styles = StyleSheet.create({
   shadowOpacity: 0.2,
   shadowRadius: 10,
   elevation: 10,
-},
-bottomSheetHandle: {
-  width: 40,
-  height: 5,
-  backgroundColor: "#ccc",
-  borderRadius: 10,
-  alignSelf: "center",
-  marginBottom: 10,
-},
-bottomSheetScroll: {
-  width: "100%",
-},
-modalTitle: {
-  fontSize: 20,
-  fontWeight: "bold",
-  marginBottom: 10,
-},
-detailText: {
-  fontSize: 16,
-  marginBottom: 5,
-},
-modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.4)",
-},
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: "#ccc",
+    borderRadius: 10,
+    alignSelf: "center",
+    marginBottom: 10,
+  },
+  bottomSheetScroll: {
+    width: "100%",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  detailText: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
+  confirmBox: {
+    width: "80%",
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 12,
+  },
+
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+
+  confirmMessage: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  confirmButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  confirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+
+  confirmBtnText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });

@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Alert
+  Alert,
+  Platform  
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
@@ -37,9 +38,18 @@ export default function PrendasEmpresasScreen({ navigation }) {
 
   const [prendaSeleccionada, setPrendaSeleccionada] = useState(null);
   const [nuevoPrecio, setNuevoPrecio] = useState('');
+  const [scrollHeight, setScrollHeight] = useState(null);
 
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      const header = document.querySelector("[data-header]")?.offsetHeight || 50;
+      const filters = 200;
+      const bottomBar = document.querySelector("[data-bottom-bar]")?.offsetHeight || 100;
 
-  // cargar  empresas
+      setScrollHeight(window.innerHeight - header - filters - bottomBar);
+    }
+  }, []);
+
   useEffect(() => {
     async function cargarEmpresas() {
       const empresas = await obtenerEmpresas();
@@ -210,7 +220,10 @@ export default function PrendasEmpresasScreen({ navigation }) {
         data={preciosEmpresa}
         keyExtractor={(item) => item.idPrenda}
         renderItem={renderPrenda}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        style={Platform.OS === "web" ? { height: scrollHeight, overflow: "auto" } : {}}
       />
+
       <Modal visible={modalSeleccionPrendas} transparent animationType="fade">
         <View style={styles.selectOverlay}>
           <View style={styles.selectModal}>

@@ -14,60 +14,61 @@ export default function PerfilScreen({ route, navigation }) {
 
   const [nombre, setNombre] = useState(usuario.nombre);
   const [correo, setCorreo] = useState(usuario.correo);
-  const [numero, setNumero] = useState(usuario.numero);
+  const [telefono, setNumero] = useState(usuario.telefono);
   const [contraseñaActual, setContraseñaActual] = useState("");
-
+  
   const guardarCambios = async () => {
-  console.log("Guardando cambios...");
-
-  const result = await actualizarUsuario({
-    nombre,
-    correo,
-    numero,
-    contraseñaActual,
-  });
-
-  console.log("RESULTADO actualizarUsuario:", result);
-
-  if (result?.requierePassword) {
-    Alert.alert(
-      "Contraseña requerida",
-      "Debes ingresar tu contraseña actual para cambiar el correo."
-    );
-    return;
-  }
-  if (!result?.ok) {
-    Alert.alert("Error", result.error || "No se pudo actualizar");
-    return;
-  }
-
-  if (result.cerroSesion) {
-    Alert.alert(
-      "Correo actualizado",
-      "Tu correo fue cambiado. Te enviamos un correo de verificación. Debes volver a iniciar sesión."
-    );
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
+    console.log("Guardando cambios...");
+    const result = await actualizarUsuario({
+      nombre,
+      correo,
+      telefono,
+      contraseñaActual,
     });
-    return;
-  }
-
-  if (!result.cerroSesion) {
-    Alert.alert(
-      "Cambios guardados",
-      "Los cambios se actualizaron correctamente, pero debes volver a iniciar sesión para verlos reflejados en toda la app."
-    );
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
-    });
-    return;
-  }
-};
+    console.log("RESULTADO actualizarUsuario:", result);
+    if (result?.requierePassword) {
+      Alert.alert(
+        "Contraseña requerida",
+        "Debes ingresar tu contraseña actual para cambiar el correo."
+      );
+      return;
+    }
+    if (!result?.ok) {
+      Alert.alert("Error", result.error || "No se pudo actualizar");
+      return;
+    }
+    if (result.cerroSesion) {
+      Alert.alert(
+        "Correo actualizado",
+        "Tu correo fue cambiado. Te enviamos un correo de verificación. Debes volver a iniciar sesión."
+      );
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+      return;
+    }
+    if (!result.cerroSesion) {
+      Alert.alert(
+        "Cambios guardados",
+        "Los cambios se actualizaron correctamente, pero debes volver a iniciar sesión para verlos reflejados en toda la app."
+      );
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+      return;
+    }
+  };
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.backButtonText}>← Volver</Text>
+      </TouchableOpacity>
       <Text style={styles.title}>Editar Perfil</Text>
       <TextInput
         style={styles.input}
@@ -84,7 +85,7 @@ export default function PerfilScreen({ route, navigation }) {
       <TextInput
         style={styles.input}
         placeholder="Número"
-        value={numero}
+        value={telefono}
         keyboardType="numeric"
         onChangeText={setNumero}
       />
@@ -104,6 +105,22 @@ export default function PerfilScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, marginTop: 40 },
+  backButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#ff6600',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#ff6600',
+    fontWeight: 'bold',
+  },
   title: { fontSize: 26, fontWeight: "bold", marginBottom: 20 },
   input: {
     borderWidth: 1,

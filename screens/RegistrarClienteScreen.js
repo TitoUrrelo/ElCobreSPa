@@ -32,7 +32,6 @@ export default function RegistrarClienteScreen({route, navigation }) {
     direccion: '',
   });
 
-  // registrar clienteS
   const handleGuardar = async () => {
   try {
     if (usuario.rol !== "administrador" && usuario.rol !== "recepcionista") {
@@ -43,14 +42,11 @@ export default function RegistrarClienteScreen({route, navigation }) {
       return;
     }
     const tipoCliente = usuario.rol === "administrador" ? "Empresa" : "Particular";
-
     const clienteConTipo = {
       ...cliente,
       tipo: tipoCliente,
     };
-
     const id = await guardarCliente(clienteConTipo);
-
     Alert.alert('Éxito', `Cliente guardado correctamente`);
     setCliente({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
   } catch (e) {
@@ -65,6 +61,12 @@ export default function RegistrarClienteScreen({route, navigation }) {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scroll}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>← Volver</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Registrar Cliente ({tipoCliente})</Text>
         <Text style={styles.label}>Nombre completo</Text>
         <TextInput
@@ -106,12 +108,6 @@ export default function RegistrarClienteScreen({route, navigation }) {
         <TouchableOpacity style={styles.button} onPress={handleGuardar}>
           <Text style={styles.buttonText}>Guardar Cliente</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.backButton]}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={[styles.buttonText, { color: '#ff6600ff' }]}>← Volver</Text>
-        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -124,6 +120,23 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 20,
+    paddingTop: 40,
+  },
+  backButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#ff6600ff',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#ff6600ff',
+    fontWeight: 'bold',
   },
   title: {
     fontSize: 22,
@@ -131,7 +144,6 @@ const styles = StyleSheet.create({
     color: '#ff6600ff',
     textAlign: 'center',
     marginBottom: 20,
-    marginTop: 40,
   },
   label: {
     fontSize: 15,
@@ -153,12 +165,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 25,
-  },
-  backButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ff6600ff',
-    marginTop: 15,
   },
   buttonText: {
     color: '#fff',

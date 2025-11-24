@@ -41,10 +41,10 @@ export default function CrearComandaScreen({ route, navigation }) {
 
 useEffect(() => {
   if (Platform.OS === 'web') {
-    const header = document.querySelector('[data-header]')?.offsetHeight || 60;
+    const header = document.querySelector('[data-header]')?.offsetHeight || 0;
     const bottomBar = document.querySelector('[data-bottom-bar]')?.offsetHeight || 80;
 
-    setScrollHeight(window.innerHeight - header - bottomBar - 80);
+    setScrollHeight(window.innerHeight - header - bottomBar - -100);
   }
 }, []);
   const [despacho, setdespacho] = useState(false);
@@ -197,12 +197,7 @@ useEffect(() => {
     const numeroGenerado = await obtenerNuevoNumeroOrdenPorTipo(clienteSeleccionado.tipo);
     const total = calcularTotal();
     let observacionesFinal = observaciones;
-    if (despacho) {
-      const notaDespacho = `\n[Despacho incluido: $${COSTO_DESPACHO}]`;
-      observacionesFinal = observaciones.trim() 
-        ? `${observaciones}${notaDespacho}` 
-        : `Despacho incluido: $${COSTO_DESPACHO}`;
-    }
+    
     const clienteFiltrado = {
       correo: clienteSeleccionado.correo,
       direccion: direccionFinal,
@@ -412,15 +407,15 @@ useEffect(() => {
           display: 'flex',
           justifyContent: 'center',
           backgroundColor: '#f5f7fa',
-          paddingTop: 40,
-          paddingBottom: 40,
+          paddingTop: 10,
+          paddingBottom: 10,
         }}
       >
         <div
           style={{
             overflowY: "auto",
-            height: scrollHeight || "calc(100vh - 80px)",
-            paddingBottom: 120,
+            height: scrollHeight || "calc(50vh - 100px)",
+            paddingBottom: 0,
             width: "100%",
             display: "flex",
             justifyContent: "center",

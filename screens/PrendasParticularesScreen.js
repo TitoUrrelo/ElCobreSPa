@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform 
 } from "react-native";
 
 import {
@@ -29,7 +30,18 @@ export default function PrendasParticularesScreen({ navigation }) {
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoPrecioCrear, setNuevoPrecioCrear] = useState("");
 
-  // cargar prendas
+  const [scrollHeight, setScrollHeight] = useState(null);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      const header = document.querySelector("[data-header]")?.offsetHeight || 50;
+      const filters = document.querySelector("[data-filters]")?.offsetHeight || 200;
+      const bottomBar = document.querySelector("[data-bottom-bar]")?.offsetHeight || 120;
+
+      setScrollHeight(window.innerHeight - header - filters - bottomBar);
+    }
+  }, []);
+
   useEffect(() => {
     cargarPrendas();
   }, []);
@@ -156,6 +168,7 @@ export default function PrendasParticularesScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         renderItem={renderPrenda}
         contentContainerStyle={{ paddingBottom: 50 }}
+        style={Platform.OS === "web" ? { height: scrollHeight } : {}}
       />
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>

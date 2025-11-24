@@ -62,7 +62,7 @@ export async function crearPreciosEmpresa(nombreEmpresa, rutEmpresa, prendasNuev
         idPrenda: p.id,
         tipo: p.tipo,
         precio: p.precio,
-        estado: p.estado,
+        estado: true,
       }))
     });
     await addDoc(collection(db, PRECIOS_EMPRESA_COLECCION), modelo.toFirestore());
@@ -80,6 +80,7 @@ export async function crearPreciosEmpresa(nombreEmpresa, rutEmpresa, prendasNuev
       idPrenda: p.id,
       tipo: p.tipo,
       precio: p.precio,
+      estado: true,
     }))
   ];
   await updateDoc(ref, { prendas: prendasFinal });

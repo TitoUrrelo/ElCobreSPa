@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import * as Linking from 'expo-linking';
 
 import { auth, db } from './firebaseConfig';
@@ -18,18 +18,17 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
   const [userData, setUserData] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('Cargando...');
-  const [isError, setIsError] = useState(false);
-
+  
+  // URL de la Intranet para volver si falla
   const INTRANET_URL = "https://lavanderia-el-cobre.vercel.app/intranet/dashboard";
 
   useEffect(() => {
     const handleDeepLink = async () => {
       try {
         const url = await Linking.getInitialURL();
+        let token = null;
 
         if (url) {
-          let token = null;
           if (url.includes('token=')) {
             const queryString = url.split('?')[1];
             if (queryString) {
@@ -45,8 +44,6 @@ export default function App() {
           }
 
           if (token) {
-            setStatusMessage('Verificando credenciales...');
-
             await signOut(auth);
 
             const userDoc = await getDoc(doc(db, 'usuarios', token));
@@ -63,51 +60,32 @@ export default function App() {
                 setInitialRoute('RecepcionistaHome');
               } else {
                 console.warn('Rol no reconocido:', rol);
-                setIsError(true);
-                setStatusMessage('Rol no autorizado.');
-                setTimeout(() => window.location.href = INTRANET_URL, 3000);
+                setTimeout(() => window.location.href = INTRANET_URL, 1000);
                 return;
               }
-
+              
               setIsLoading(false);
               return;
             } else {
-              setIsError(true);
-              setStatusMessage('Credenciales inválidas.');
-              setTimeout(() => window.location.href = INTRANET_URL, 3000);
+              setTimeout(() => window.location.href = INTRANET_URL, 1000);
               return;
             }
           }
         }
 
-        // Si no hay token, vamos al login normal
         setIsLoading(false);
 
       } catch (error) {
         console.error("Error verificando token:", error);
-        setIsError(true);
-        setStatusMessage('Error de conexión.');
-        setTimeout(() => setIsLoading(false), 2000);
+        setIsLoading(false); 
       }
     };
 
     handleDeepLink();
   }, []);
 
-  if (isLoading || isError) {
-    return (
-      <View style={styles.loadingContainer}>
-        {isError ? (
-          <Text style={styles.errorIcon}>⚠️</Text>
-        ) : (
-          <ActivityIndicator size="large" color="#f97316" style={styles.spinner} />
-        )}
-
-        <Text style={[styles.loadingText, isError && styles.errorText]}>
-          {statusMessage}
-        </Text>
-      </View>
-    );
+  if (isLoading) {
+    return null;
   }
 
   return (
@@ -132,27 +110,4 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#ffedd5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  spinner: {
-    transform: [{ scale: 1.5 }],
-    marginBottom: 20,
-  },
-  loadingText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#ea580c',
-    fontFamily: 'System',
-  },
-  errorText: {
-    color: '#dc2626',
-  },
-  errorIcon: {
-    fontSize: 50,
-    marginBottom: 20,
-  }
 });

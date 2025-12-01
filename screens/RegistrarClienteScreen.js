@@ -9,20 +9,30 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 
 import { guardarCliente } from '../control/clienteControl';
 
 export default function RegistrarClienteScreen({route, navigation }) {
   const { usuario } = route.params;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    titulo: '',
+    mensaje: '',
+    botones: []
+  });
+
   if (usuario.rol !== "administrador" && usuario.rol !== "recepcionista") {
+  setTimeout(() => {
     Alert.alert(
       "Error de acceso",
-      "Solo administradores o recepcionistas pueden registrar clientes."
+      "Solo administradores o recepcionistas pueden registrar clientes.",
+      [{ text: "OK", onPress: () => navigation.goBack() }]
     );
-    navigation.goBack();
-    return null;
-  }
+  }, 100);
+  return null;
+}
   const tipoCliente = usuario.rol === "administrador" ? "Empresa" : "Particular";
   const [cliente, setCliente] = useState({
     nombre: '',
@@ -35,24 +45,105 @@ export default function RegistrarClienteScreen({route, navigation }) {
   const handleGuardar = async () => {
   try {
     if (usuario.rol !== "administrador" && usuario.rol !== "recepcionista") {
-      Alert.alert(
+      mostrarModal(
         "Error de acceso",
         "Solo administradores o recepcionistas pueden guardar clientes."
       );
       return;
     }
+    if (!cliente.nombre.trim()) {
+      mostrarModal("Error", "El nombre es obligatorio");
+      return;
+    }
+    if (!cliente.rut.trim()) {
+      mostrarModal("Error", "El RUT es obligatorio");
+      return;
+    }
+    if (!cliente.telefono.trim()) {
+      mostrarModal("Error", "El teléfono es obligatorio");
+      return;
+    }
+    if (!cliente.correo.trim()) {
+      mostrarModal("Error", "El correo es obligatorio");
+      return;
+    }
+
+    const resultadoTelefono = validarTelefono(cliente.telefono);
+    if (resultadoTelefono !== true) {
+      mostrarModal("Error", resultadoTelefono);
+      return;
+    }
+
+    const resultadoCorreo = validarCorreo(cliente.correo);
+    if (resultadoCorreo !== true) {
+      mostrarModal("Error", resultadoCorreo);
+      return;
+    }
+
     const tipoCliente = usuario.rol === "administrador" ? "Empresa" : "Particular";
     const clienteConTipo = {
       ...cliente,
       tipo: tipoCliente,
     };
+
     const id = await guardarCliente(clienteConTipo);
-    Alert.alert('Éxito', `Cliente guardado correctamente`);
-    setCliente({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+    
+    mostrarModal('Éxito', `Cliente guardado correctamente`, [
+      {
+        text: 'OK',
+        onPress: () => {
+          cerrarModal();
+          setCliente({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+        }
+      }
+    ]);
   } catch (e) {
-    Alert.alert('Error', e.message);
-    console.log('No se pudo guardar cliente:', e.message);
+    mostrarModal('Error', e.message);
   }
+};
+
+const mostrarModal = (titulo, mensaje, botones = [{ text: 'OK', onPress: () => {} }]) => {
+  setModalConfig({ titulo, mensaje, botones });
+  setModalVisible(true);
+};
+
+  const cerrarModal = () => {
+    setModalVisible(false);
+  };
+
+  const validarTelefono = (telefono) => {
+
+  const telefonoLimpio = telefono.replace(/[\s-]/g, '');
+  
+  if (telefonoLimpio.length !== 9) {
+    return 'El teléfono debe tener 9 dígitos';
+  }
+  
+  if (!telefonoLimpio.startsWith('9')) {
+    return 'El teléfono debe comenzar con 9';
+  }
+  
+  if (!/^\d+$/.test(telefonoLimpio)) {
+    return 'El teléfono solo debe contener números';
+  }
+  
+  return true;
+};
+
+const validarCorreo = (correo) => {
+  const correoTrimmed = correo.trim();
+  
+  if (!correoTrimmed) {
+    return 'El correo es obligatorio';
+  }
+  
+  const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!regexCorreo.test(correoTrimmed)) {
+    return 'Ingrese un correo válido (debe contener @ y un dominio válido)';
+  }
+  
+  return true;
 };
 
   return (
@@ -109,6 +200,41 @@ export default function RegistrarClienteScreen({route, navigation }) {
           <Text style={styles.buttonText}>Guardar Cliente</Text>
         </TouchableOpacity>
       </ScrollView>
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={cerrarModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitulo}>{modalConfig.titulo}</Text>
+            <Text style={styles.modalMensaje}>{modalConfig.mensaje}</Text>
+            <View style={styles.modalBotones}>
+              {modalConfig.botones.map((boton, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.modalBoton,
+                    modalConfig.botones.length === 1 && styles.modalBotonPrimario
+                  ]}
+                  onPress={() => {
+                    cerrarModal();
+                    if (boton.onPress) boton.onPress();
+                  }}
+                >
+                  <Text style={[
+                    styles.modalBotonTexto,
+                    modalConfig.botones.length === 1 && styles.modalBotonTextoPrimario
+                  ]}>
+                    {boton.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -170,5 +296,64 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitulo: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+    textAlign: 'center',
+  },
+  modalMensaje: {
+    fontSize: 16,
+    marginBottom: 20,
+    color: '#666',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  modalBotones: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 10,
+  },
+  modalBoton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ff6600ff',
+    alignItems: 'center',
+  },
+  modalBotonPrimario: {
+    backgroundColor: '#ff6600ff',
+    borderColor: '#ff6600ff',
+  },
+  modalBotonTexto: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ff6600ff',
+  },
+  modalBotonTextoPrimario: {
+    color: 'white',
   },
 });

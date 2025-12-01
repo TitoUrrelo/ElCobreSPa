@@ -230,7 +230,7 @@ export default function PrendasParticularesScreen({ navigation }) {
             <Text style={styles.modalTitle}>Crear Prenda</Text>
             <TextInput
               style={styles.input}
-              placeholder="Tipo de prenda"
+              placeholder="Nombre de la prenda"
               value={nuevoNombre}
               onChangeText={setNuevoNombre}
             />

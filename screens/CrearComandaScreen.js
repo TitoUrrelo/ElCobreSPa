@@ -10,6 +10,7 @@ import {
   Platform,
   useWindowDimensions,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -36,6 +37,13 @@ export default function CrearComandaScreen({ route, navigation }) {
   const [observaciones, setObservaciones] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState(new Date());
   const [mostrarFecha, setMostrarFecha] = useState(false);
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    titulo: '',
+    mensaje: '',
+    botones: []
+  });
 
   const [scrollHeight, setScrollHeight] = useState(0);
 
@@ -68,14 +76,14 @@ useEffect(() => {
         } else if (usuario.rol === "recepcionista") {
           tipoFiltro = "Particular";
         } else {
-          Alert.alert("Error", "Rol no reconocido");
+          mostrarModal("Error", "Rol no reconocido");
           return;
         }
         const data = await obtenerClientesPorTipo(tipoFiltro);
         setClientes(data);
       } catch (e) {
         console.error("Error al obtener clientes filtrados:", e);
-        Alert.alert("Error", "No se pudieron cargar los clientes.");
+        mostrarModal("Error", "No se pudieron cargar los clientes.");
       }
     };
     cargarClientes();
@@ -98,7 +106,7 @@ useEffect(() => {
           const empresaRut = clienteSeleccionado.rut;
           const preciosEmpresa = await obtenerPreciosEmpresa(empresaRut);
           if (!preciosEmpresa) {
-            Alert.alert(
+            mostrarModal(
               "Aviso",
               `La empresa "${clienteSeleccionado.nombre}" aún no tiene precios configurados.`
             );
@@ -116,11 +124,11 @@ useEffect(() => {
           setTiposPrendas(prendasConvertidas);
           return;
         }
-        Alert.alert("Error", "Rol no reconocido");
+        mostrarModal("Error", "Rol no reconocido");
         setTiposPrendas([]);
       } catch (e) {
         console.error("Error al cargar prendas:", e);
-        Alert.alert("Error", "No se pudieron cargar las prendas.");
+        mostrarModal("Error", "No se pudieron cargar las prendas.");
       }
     };
 
@@ -167,12 +175,12 @@ useEffect(() => {
 
   const handleGuardar = async () => {
     if (!clienteSeleccionado || prendas.length === 0) {
-      Alert.alert('Error', 'Debes seleccionar un cliente y agregar al menos una prenda.');
+      mostrarModal('Error', 'Debes seleccionar un cliente y agregar al menos una prenda.');
       return;
     }
     for (let p of prendas) {
       if (!p.tipo || !p.cantidad || parseInt(p.cantidad) <= 0) {
-        Alert.alert("Error", "Todas las prendas deben tener tipo y una cantidad válida.");
+        mostrarModal("Error", "Todas las prendas deben tener tipo y una cantidad válida.");
         return;
       }
     }
@@ -182,7 +190,7 @@ useEffect(() => {
           : direccionDespacho)
       : clienteSeleccionado.direccion;
     if (despacho && (!direccionFinal || direccionFinal.trim() === "")) {
-      Alert.alert("Error", "Debes ingresar una dirección de despacho.");
+      mostrarModal("Error", "Debes ingresar una dirección de despacho.");
       return;
     }
     if (despacho && direccionFinal !== clienteSeleccionado.direccion) {
@@ -237,17 +245,20 @@ useEffect(() => {
       const idGenerado = await crearComanda(nuevaComanda);
       const comandaConID = { ...nuevaComanda, id: idGenerado };
       setLoading(false);
-      Alert.alert(
+      mostrarModal(
         "Comanda creada",
         `Se guardó correctamente para ${clienteSeleccionado.nombre}\nNúmero de orden: ${numeroGenerado}`,
         [
           {
             text: "Imprimir",
-            onPress: () => generarPDF(comandaConID)
+            onPress: () => {
+              cerrarModal();
+              generarPDF(comandaConID);
+            }
           },
           {
-            text: "OK",
-            style: "cancel"
+            text: "Aceptar",
+            onPress: () => cerrarModal()
           }
         ]
       );
@@ -260,7 +271,7 @@ useEffect(() => {
       setDireccionDespacho('');
     } catch (error) {
       console.error("Error al crear comanda:", error);
-      Alert.alert('Error', 'No se pudo guardar la comanda');
+      mostrarModal('Error', 'No se pudo guardar la comanda');
     } finally {
       setLoading(false);
     }
@@ -285,7 +296,7 @@ useEffect(() => {
       } else {
         console.log(" No hay prendas configuradas para esta empresa");
         setTiposPrendas([]);
-        Alert.alert("Atención", "Esta empresa aún no tiene precios configurados.");
+        mostrarModal("Atención", "Esta empresa aún no tiene precios configurados.");
       }
     } else {
       console.log("Cargando prendas normales");
@@ -387,15 +398,24 @@ useEffect(() => {
           dialogTitle: "Guardar o compartir comanda",
         });
       } else {
-        Alert.alert("PDF generado", `Archivo temporal: ${uri}`);
+        mostrarModal("PDF generado", `Archivo temporal: ${uri}`);
       }
     } catch (error) {
       console.error("Error al generar PDF:", error);
-      Alert.alert("Error", "No se pudo generar el PDF.");
+      mostrarModal("Error", "No se pudo generar el PDF.");
     }
   };
   const necesitaDireccion = despacho &&
     (!clienteSeleccionado?.direccion || clienteSeleccionado.direccion.trim() === "");
+
+  const mostrarModal = (titulo, mensaje, botones = [{ text: 'Aceptar', onPress: () => {} }]) => {
+    setModalConfig({ titulo, mensaje, botones });
+    setModalVisible(true);
+  };
+
+  const cerrarModal = () => {
+    setModalVisible(false);
+  };
   return (
   <View style={{ flex: 1, width: '100%', height: '100%' }}>
     {Platform.OS === 'web' ? (
@@ -445,6 +465,7 @@ useEffect(() => {
                 {clienteSeleccionado.direccion?.trim() !== "" && (
                   <Text>📍 Dirección: {clienteSeleccionado.direccion}</Text>
                 )}
+                <Text>✉️ Correo: {clienteSeleccionado.correo}</Text>
               </View>
             )}
             <Text style={styles.label}>Prendas</Text>
@@ -631,6 +652,7 @@ useEffect(() => {
               {clienteSeleccionado.direccion && clienteSeleccionado.direccion.trim() !== "" && (
                 <Text>📍 Dirección: {clienteSeleccionado.direccion}</Text>
               )}
+              <Text>✉️ Correo: {clienteSeleccionado.correo}</Text>
             </View>
           )}
 
@@ -788,6 +810,41 @@ useEffect(() => {
       </ScrollView>
       
     )}
+    <Modal
+      visible={modalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={cerrarModal}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitulo}>{modalConfig.titulo}</Text>
+          <Text style={styles.modalMensaje}>{modalConfig.mensaje}</Text>
+          <View style={styles.modalBotones}>
+            {modalConfig.botones.map((boton, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.modalBoton,
+                  index === 0 && modalConfig.botones.length > 1 && styles.modalBotonPrimario
+                ]}
+                onPress={() => {
+                  cerrarModal();
+                  if (boton.onPress) boton.onPress();
+                }}
+              >
+                <Text style={[
+                  styles.modalBotonTexto,
+                  index === 0 && modalConfig.botones.length > 1 && styles.modalBotonTextoPrimario
+                ]}>
+                  {boton.text}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
   </View>
 );
 }
@@ -1002,5 +1059,64 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ff6600ff',
     marginTop: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitulo: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+    textAlign: 'center',
+  },
+  modalMensaje: {
+    fontSize: 16,
+    marginBottom: 20,
+    color: '#666',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  modalBotones: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 10,
+  },
+  modalBoton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#ff6600ff',
+    borderWidth: 1,
+    borderColor: '#ff6600ff',
+    alignItems: 'center',
+  },
+  modalBotonPrimario: {
+    backgroundColor: '#ff6600ff',
+    borderColor: '#ff6600ff',
+  },
+  modalBotonTexto: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  modalBotonTextoPrimario: {
+    color: 'white',
   },
 });

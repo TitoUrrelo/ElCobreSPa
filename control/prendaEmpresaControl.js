@@ -115,12 +115,8 @@ export async function crearPreciosEmpresaConSeleccion(empresa, prendasSelecciona
 
 export async function actualizarEstadoPrendaEmpresa(idDoc, idPrenda, nuevoEstado) {
   const ref = doc(db, PRECIOS_EMPRESA_COLECCION, idDoc);
-
-  // obtener doc
   const snapshot = await getDocs(collection(db, PRECIOS_EMPRESA_COLECCION));
   const docData = snapshot.docs.find(d => d.id === idDoc).data();
-
-  // actualizar estado solo en la prenda indicada
   const nuevasPrendas = docData.prendas.map((p) =>
     p.idPrenda === idPrenda ? { ...p, estado: nuevoEstado } : p
   );
